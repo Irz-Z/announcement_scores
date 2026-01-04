@@ -1,0 +1,226 @@
+/* styles.css */
+body {
+  font-family: Arial, sans-serif;
+  background-color: #F0F8FF; /* Alice Blue - light blue background */
+  text-align: center;
+  margin: 0;
+}
+
+/* Header styling for both pages */
+header {
+  background-color: #87CEEB; /* Light Sky Blue - soft blue header */
+  color: white;
+  padding: 15px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+header h2 {
+  margin: 0;
+  font-size: 1.5em;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+/* Container for content */
+.container {
+  margin: 50px auto;
+  max-width: 800px; /* Wider container for dashboard table */
+  background-color: #FFF5F7; /* Soft pink for container */
+  padding: 20px;
+  border-radius: 10px;
+  box-shadow: 0 0 15px rgba(255, 193, 204, 0.5); /* Soft pink shadow */
+}
+
+/* Login form styling */
+.login label {
+  display: block;
+  margin: 10px 0 5px;
+  font-weight: bold;
+  color: #FF69B4; /* Hot Pink - bold pink for labels */
+}
+
+.login input[type="text"],
+.login input[type="password"] {
+  width: 100%;
+  padding: 8px;
+  margin-bottom: 15px;
+  border: 2px solid #87CEEB; /* Light blue border */
+  border-radius: 5px;
+  box-sizing: border-box;
+  background-color: #F0F8FF; /* Light blue input background */
+  color: #333;
+}
+
+.login input[type="text"]:focus,
+.login input[type="password"]:focus {
+  outline: none;
+  border-color: #FF69B4; /* Pink border on focus */
+  box-shadow: 0 0 5px rgba(255, 105, 180, 0.5);
+}
+
+.login input[type="submit"] {
+  background-color: #87CEEB; /* Light blue button */
+  color: white;
+  padding: 10px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  width: 100%;
+  font-weight: bold;
+  transition: background-color 0.3s;
+}
+
+.login input[type="submit"]:hover {
+  background-color: #FF69B4; /* Hot pink on hover */
+}
+
+/* Error message on login page */
+#error-message {
+  color: #FF1493; /* Deep Pink - error text */
+  font-size: 14px;
+  margin-top: -10px;
+  margin-bottom: 10px;
+}
+
+/* Dashboard-specific styling */
+#logout-btn {
+  background-color: #87CEEB; /* Light blue logout button */
+  color: white;
+  padding: 10px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: background-color 0.3s;
+}
+
+#logout-btn:hover {
+  background-color: #FF69B4; /* Hot pink on hover */
+}
+
+/* Add student form styling */
+#add-student-form {
+  text-align: left;
+  margin: 20px 0;
+}
+
+#add-student-form h3 {
+  color: #FF69B4; /* Hot pink for form heading */
+  margin-bottom: 15px;
+}
+
+#add-student-form label,
+#add-student-form span {
+  display: inline-block;
+  width: 120px; /* Fixed width for labels */
+  font-weight: bold;
+  color: #FF69B4; /* Hot pink labels */
+  margin: 10px 0 5px;
+}
+
+#add-student-form input[type="text"],
+#add-student-form input[type="number"],
+#add-student-form select {
+  width: calc(100% - 130px); /* Adjust width to align with labels */
+  padding: 8px;
+  margin-bottom: 10px;
+  border: 2px solid #87CEEB; /* Light blue border */
+  border-radius: 5px;
+  background-color: #F0F8FF; /* Light blue input background */
+}
+
+#add-student-form input[type="text"]:focus,
+#add-student-form input[type="number"]:focus,
+#add-student-form select:focus {
+  outline: none;
+  border-color: #FF69B4; /* Pink border on focus */
+  box-shadow: 0 0 5px rgba(255, 105, 180, 0.5);
+}
+
+#add-student-form input[type="submit"] {
+  background-color: #87CEEB; /* Light blue submit button */
+  color: white;
+  padding: 10px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  width: 100%;
+  font-weight: bold;
+  transition: background-color 0.3s;
+  margin-top: 15px;
+}
+
+#add-student-form input[type="submit"]:hover {
+  background-color: #FF69B4; /* Hot pink on hover */
+}
+
+/* Excel upload button */
+#upload-excel-btn {
+  background-color: #87CEEB; /* Light blue button */
+  color: white;
+  padding: 10px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-weight: bold;
+  margin: 10px 0;
+  transition: background-color 0.3s;
+}
+
+#upload-excel-btn:hover {
+  background-color: #FF69B4; /* Hot pink on hover */
+}
+
+/* Search bar styling */
+#search-input {
+  width: 70%;
+  padding: 8px;
+  border: 2px solid #87CEEB; /* Light blue border */
+  border-radius: 5px;
+  background-color: #F0F8FF; /* Light blue background */
+}
+
+#search-btn {
+  background-color: #87CEEB; /* Light blue button */
+  color: white;
+  padding: 8px 15px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: background-color 0.3s;
+}
+
+#search-btn:hover {
+  background-color: #FF69B4; /* Hot pink on hover */
+}
+
+/* Table styling */
+.table-container {
+  overflow-x: auto; /* Responsive table for small screens */
+  margin-top: 20px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th, td {
+  border: 1px solid #87CEEB; /* Light blue borders */
+  padding: 8px;
+  text-align: left;
+}
+
+th {
+  background-color: #FF69B4; /* Hot pink header */
+  color: white;
+}
+
+td {
+  background-color: #F0F8FF; /* Light blue rows */
+}
+
+/* Hidden class for conditional fields */
+.hidden {
+  display: none;
+}

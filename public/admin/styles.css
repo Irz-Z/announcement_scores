@@ -1,0 +1,123 @@
+body { 
+  font-family: Arial, sans-serif; 
+  background-color: #F0F8FF; /* Alice Blue - พื้นหลังสีฟ้าอ่อน */
+  text-align: center; 
+  margin: 0; 
+}
+
+header { 
+  background-color: #87CEEB; /* Light Sky Blue - ฟ้าอ่อนสำหรับ header */
+  color: white; 
+  padding: 15px; 
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+header h2 {
+  margin: 0;
+  font-size: 1.5em;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.container { 
+  margin: 50px auto; 
+  max-width: 400px; /* ปรับให้เหมาะกับฟอร์มล็อกอิน */
+  background-color: #FFF5F7; /* ชมพูอ่อนสำหรับ container */
+  padding: 20px; 
+  border-radius: 10px; 
+  box-shadow: 0 0 15px rgba(255, 193, 204, 0.5); /* เงาชมพูอ่อน */
+}
+
+.login label { 
+  display: block; 
+  margin: 10px 0 5px; 
+  font-weight: bold; 
+  color: #FF69B4; /* Hot Pink - สีชมพูเข้มสำหรับ label */
+}
+
+.login input[type="text"], 
+.login input[type="password"] { 
+  width: 100%; 
+  padding: 8px; 
+  margin-bottom: 15px; 
+  border: 2px solid #87CEEB; /* ขอบฟ้าอ่อน */
+  border-radius: 5px; 
+  box-sizing: border-box; 
+  background-color: #F0F8FF; /* พื้นหลังฟ้าอ่อนสำหรับ input */
+  color: #333;
+}
+
+.login input[type="text"]:focus,
+.login input[type="password"]:focus {
+  outline: none;
+  border-color: #FF69B4; /* ขอบเปลี่ยนเป็นชมพูตอน focus */
+  box-shadow: 0 0 5px rgba(255, 105, 180, 0.5);
+}
+
+.login input[type="submit"] { 
+  background-color: #87CEEB; /* ฟ้าอ่อนสำหรับปุ่ม */
+  color: white; 
+  padding: 10px; 
+  border: none; 
+  border-radius: 5px; 
+  cursor: pointer; 
+  width: 100%; 
+  font-weight: bold;
+  transition: background-color 0.3s;
+}
+
+.login input[type="submit"]:hover { 
+  background-color: #FF69B4; /* ชมพูเข้มตอน hover */
+}
+
+.error { 
+  color: #FF1493; /* Deep Pink - ชมพูเข้มสำหรับ error */
+  font-size: 14px; 
+  margin-top: -10px; 
+  margin-bottom: 10px; 
+  display: none; 
+}
+
+/* เพิ่มสไตล์สำหรับหน้า results และอื่นๆ */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+}
+
+th, td {
+  border: 1px solid #87CEEB; /* ขอบฟ้าอ่อน */
+  padding: 8px;
+  text-align: left;
+}
+
+th {
+  background-color: #FF69B4; /* ชมพูเข้มสำหรับหัวตาราง */
+  color: white;
+}
+
+td {
+  background-color: #F0F8FF; /* ฟ้าอ่อนสำหรับเนื้อตาราง */
+}
+
+#logout-btn {
+  background-color: #87CEEB; /* ฟ้าอ่อนสำหรับปุ่ม logout */
+  color: white;
+  padding: 10px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  width: 100%;
+  font-weight: bold;
+  margin-top: 20px;
+  transition: background-color 0.3s;
+}
+
+#logout-btn:hover {
+  background-color: #FF69B4; /* ชมพูเข้มตอน hover */
+}
+
+.error-message {
+  color: #FF1493; /* Deep Pink - ชมพูเข้มสำหรับ error */
+  font-size: 18px;
+  margin-top: 20px;
+}

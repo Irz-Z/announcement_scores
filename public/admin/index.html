@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Login</title>
+    <script type="module" src="firebase.js"></script>
+    <script type="module" src="login.js"></script>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <h2>เข้าสู่ระบบแอดมิน</h2>
+    <p>ระบบจัดการผลสอบ</p>
+
+    <form id="login-form">
+        <label>ชื่อผู้ใช้:</label>
+        <input type="text" id="adminName" required>
+
+        <label>รหัสผ่าน:</label>
+        <input type="password" id="adminPass" required>
+
+        <input type="submit" value="เข้าสู่ระบบ">
+    </form>
+    <p id="error-message" style="color: red;"></p>
+    <footer>
+        <p>© 2025 Triamudom suksanomklao Nokronratchsima Powered by Intensive Digital Technology : IDGT</p>
+    </footer>
+</body>
+</html>

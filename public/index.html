@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>เข้าสู่ระบบ</title>
+    <link rel="stylesheet" href="styles.css">
+    <script type="module" src="login.js"></script>
+</head>
+<body>
+    <header>
+        <h2>ตรวจสอบคะแนนการสอบเข้าต่อระดับชั้นมัธยมศึกษาปีที่ 4 รอบวัดความรู้ทั่วไป<br/>โรงเรียนเตรียมอุดมศึกษาน้อมเกล้า นครราชสีมา</h2>
+    </header>
+    <div class="container">
+        <section class="login">
+            <form id="login-form" method="POST">
+                <label>รหัสบัตรประชาชน</label>
+                <input type="text" name="thID" placeholder="เช่น 1112415655151" required maxlength="13" pattern="\d{13}">
+                <div id="thID-error" class="error">กรุณากรอกรหัสบัตรประชาชน 13 หลัก</div>
+
+                <input type="submit" value="เข้าสู่ระบบ">
+            </form>
+        </section>
+    </div>
+
+    <footer>
+        <p>© 2025 Triamudom suksanomklao Nokronratchsima Powered by Intensive Digital Technology : IDGT</p>
+    </footer>
+</body>
+</html>

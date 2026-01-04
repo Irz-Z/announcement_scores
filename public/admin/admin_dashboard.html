@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard</title>
+    <!-- CDN for xlsx -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<h2 id="admin-name">Welcome, Admin</h2>
+<button id="logout-btn" class="logout-btn">Logout</button>
+
+<h2>จัดการคะแนนนักเรียน</h2>
+
+<!-- Form to add new student -->
+<form id="add-student-form">
+    <h3>เพิ่มนักเรียนใหม่</h3>
+    รหัสบัตรประชาชน: <input type="text" name="thID" required maxlength="13"><br/>
+    คำนำหน้า:
+    <select name="prefix">
+        <option value="เด็กชาย">เด็กชาย</option>
+        <option value="เด็กหญิง">เด็กหญิง</option>
+        <option value="นาย">นาย</option>
+        <option value="นางสาว">นางสาว</option>
+    </select><br/>
+    ชื่อ: <input type="text" name="name" required>
+    นามสกุล: <input type="text" name="surname" required><br/>
+    รหัสผู้เข้าสอบ: <input type="text" name="studentID" required maxlength="8"><br/>
+    แผนการเรียน:
+    <select name="study_plan" id="study-plan">
+        <option value="ISMT">วิทยาศาสตร์ คณิตศาสตร์ และเทคโนโลยี</option>
+        <option value="ILEC">ภาษาต่างประเทศ (อังกฤษ - จีน)</option>
+        <option value="IDGT">เทคโนโลยีดิจิทัล</option>
+        <option value="IDGT + ISMT">วิทยาศาสตร์ คณิตศาสตร์ เทคโนโลยีดิจิทัล</option>
+    </select><br/>
+
+    <!-- Score fields -->
+    <div id="math-section" class="hidden">
+        คณิตศาสตร์: <input type="number" name="math" min="0" max="40"><br/>
+    </div>
+    <div id="science-section" class="hidden">
+        วิทยาศาสตร์: <input type="number" name="science" min="0" max="60"><br/>
+    </div>
+    <div id="english-section" class="hidden">
+        ภาษาอังกฤษ: <input type="number" name="english" min="0" max="50"><br/>
+    </div>
+    <div id="chinese-section" class="hidden">
+        ภาษาจีน: <input type="number" name="chinese" min="0" max="40"><br/>
+    </div>
+    <div id="social-section" class="hidden">
+        สังคมศึกษา: <input type="number" name="social" min="0" max="60"><br/>
+    </div>
+    <div id="thai-section" class="hidden">
+        ภาษาไทย: <input type="number" name="thai" min="0" max="60"><br/>
+    </div>
+    <div id="technology-section" class="hidden">
+        เทคโนโลยี: <input type="number" name="technology" min="0" max="80"><br/>
+    </div>
+
+    <input type="submit" value="เพิ่มนักเรียน">
+</form>
+
+<!-- Excel upload button and status -->
+<button id="upload-excel-btn">อัปโหลดไฟล์ Excel</button>
+<input type="file" id="excel-file" accept=".xlsx" style="display: none;">
+<div id="upload-status" style="margin-top: 10px;"></div>
+
+<!-- Search and table -->
+<input type="text" id="search-input" placeholder="ค้นหานักเรียน...">
+<button id="search-btn">ค้นหา</button>   
+<table>
+    <thead>
+        <tr>
+            <th>ลำดับ</th>
+            <th>รหัสบัตรประชาชน</th>
+            <th>รหัสนักเรียน</th>
+            <th>คำนำหน้า</th>
+            <th>ชื่อ</th>
+            <th>นามสกุล</th>
+            <th>แผนการเรียน</th>
+            <th>คณิตศาสตร์</th>
+            <th>วิทยาศาสตร์</th>
+            <th>ภาษาอังกฤษ</th>
+            <th>สังคมศึกษา</th>
+            <th>ภาษาจีน</th>
+            <th>ภาษาไทย</th>
+            <th>เทคโนโลยี</th>
+            <th>คะแนนรวม</th>
+            <th>การจัดการ</th>
+        </tr>
+    </thead>
+    <tbody id="student-table">
+        <!-- Data will be populated by JavaScript -->
+    </tbody>
+</table>
+
+<footer>
+    <p>© 2025 Triamudom suksanomklao Nokronratchsima Powered by Intensive Digital Technology : IDGT</p>
+</footer>
+
+<!-- Load Firebase and Dashboard scripts -->
+<script type="module" src="./firebase.js"></script>
+<script type="module" src="./dashboard.js"></script>
+
+</body>
+</html>

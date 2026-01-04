@@ -1,0 +1,5 @@
+body { font-family: Arial, sans-serif; text-align: center; }
+form { max-width: 400px; margin: auto; text-align: left; }
+input, select { width: 100%; padding: 8px; margin-top: 5px; }
+.hidden { display: none; }
+button { margin-top: 10px; }

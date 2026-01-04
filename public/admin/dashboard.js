@@ -1,0 +1,546 @@
+import { auth, db, onAuthStateChanged, signOut, collection, getDocs, addDoc, deleteDoc, doc, updateDoc, query, where } from './firebase.js';
+
+// Check admin authentication state
+onAuthStateChanged(auth, (user) => {
+    if (user) {
+        document.getElementById('admin-name').textContent = `Welcome, ${user.email}`;
+        loadStudents();
+    } else {
+        window.location.href = 'index.html';
+    }
+});
+
+// Logout functionality
+document.getElementById('logout-btn').addEventListener('click', () => {
+    signOut(auth).then(() => {
+        window.location.href = 'index.html';
+    }).catch((error) => {
+        console.error('Logout error:', error);
+    });
+});
+
+// Show/hide score fields based on study plan
+document.getElementById("study-plan").addEventListener("change", function () {
+    const plan = this.value;
+    const sections = [
+        "math-section", "science-section", "english-section",
+        "chinese-section", "social-section", "thai-section", "technology-section"
+    ];
+    sections.forEach(section => document.getElementById(section).classList.add("hidden"));
+
+    if (plan === "ISMT") {
+        showSections(["math-section", "science-section", "english-section"]);
+    } else if (plan === "ILEC") {
+        showSections(["chinese-section", "social-section", "thai-section", "english-section"]);
+    } else if (plan === "IDGT") {
+        showSections(["math-section", "science-section", "english-section", "technology-section"]);
+    } else if (plan === "IDGT + ISMT") {
+        showSections(["math-section", "science-section", "english-section", "technology-section"]);
+    }
+});
+
+function showSections(sectionIds) {
+    sectionIds.forEach(section => document.getElementById(section).classList.remove("hidden"));
+}
+
+// Check for duplicate studentID
+async function checkDuplicateStudentID(studentID, excludeDocId = null) {
+    const q = query(collection(db, 'students'), where('studentID', '==', studentID));
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.some(doc => doc.id !== excludeDocId);
+}
+
+// Handle adding new student
+document.getElementById('add-student-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    const studentID = formData.get('studentID');
+    const studyPlan = formData.get('study_plan');
+    let scores = {};
+
+    if (await checkDuplicateStudentID(studentID)) {
+        alert('รหัสนักเรียนนี้มีอยู่ในระบบแล้ว');
+        return;
+    }
+
+    if (studyPlan === 'ISMT') {
+        scores = {
+            math: parseInt(formData.get('math')) || 0,
+            science: parseInt(formData.get('science')) || 0,
+            english: parseInt(formData.get('english')) || 0
+        };
+    } else if (studyPlan === 'ILEC') {
+        scores = {
+            english: parseInt(formData.get('english')) || 0,
+            chinese: parseInt(formData.get('chinese')) || 0,
+            social: parseInt(formData.get('social')) || 0,
+            thai: parseInt(formData.get('thai')) || 0
+        };
+    } else if (studyPlan === 'IDGT') {
+        scores = {
+            math: parseInt(formData.get('math')) || 0,
+            science: parseInt(formData.get('science')) || 0,
+            english: parseInt(formData.get('english')) || 0,
+            technology: parseInt(formData.get('technology')) || 0
+        };
+    } else if (studyPlan === 'IDGT + ISMT') {
+        scores = {
+            math: parseInt(formData.get('math')) || 0,
+            science: parseInt(formData.get('science')) || 0,
+            english: parseInt(formData.get('english')) || 0,
+            technology: parseInt(formData.get('technology')) || 0
+        };
+    }
+
+    try {
+        await addDoc(collection(db, 'students'), {
+            thID: formData.get('thID'),
+            studentID: studentID,
+            prefix: formData.get('prefix'),
+            name: formData.get('name'),
+            surname: formData.get('surname'),
+            studyPlan: studyPlan,
+            scores: scores
+        });
+        alert('เพิ่มนักเรียนสำเร็จ');
+        e.target.reset();
+        loadStudents();
+    } catch (error) {
+        console.error('Error adding student:', error);
+        alert('เกิดข้อผิดพลาดในการเพิ่มนักเรียน');
+    }
+});
+
+// Handle Excel upload and stop if no data
+document.getElementById('upload-excel-btn').addEventListener('click', () => {
+    document.getElementById('excel-file').click();
+});
+
+document.getElementById('excel-file').addEventListener('change', (event) => {
+    const file = event.target.files[0];
+    const statusDiv = document.getElementById('upload-status');
+    const studentTable = document.getElementById('student-table');
+
+    if (!file) {
+        statusDiv.textContent = 'กรุณาเลือกไฟล์';
+        statusDiv.style.color = 'red';
+        return;
+    }
+
+    const fileName = file.name;
+    const reader = new FileReader();
+
+    reader.onloadstart = () => {
+        statusDiv.textContent = `กำลังอัปโหลดไฟล์: ${fileName}...`;
+        statusDiv.style.color = 'blue';
+    };
+
+    reader.onload = async (e) => {
+        try {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, { type: 'array' });
+            const sheet = workbook.Sheets[workbook.SheetNames[0]];
+            const jsonData = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+
+            // Clear table before adding new data
+            studentTable.innerHTML = '';
+            let rowNumber = 1;
+
+            for (let i = 1; i < jsonData.length; i++) {
+                const row = jsonData[i];
+                const excelRowNumber = i + 1; // Human-readable row number (starts at 2)
+
+                // Check if row is empty (no data)
+                if (!row || row.every(cell => !cell || String(cell).trim() === '')) {
+                    statusDiv.textContent = `หยุดอัปโหลดที่แถวที่ ${excelRowNumber} เนื่องจากไม่มีข้อมูล`;
+                    statusDiv.style.color = 'orange';
+                    break; // Stop uploading if row is empty
+                }
+
+                const thID = String(row[0] || '').trim();
+                const studentID = String(row[1] || '').trim();
+                const prefix = row[6] || '';
+                const name = row[7] || '';
+                const surname = row[8] || '';
+                const studyPlan = row[9] || '';
+                const normalizedStudyPlan = studyPlan.trim();
+
+                let scores = {};
+                let totalScore = 0;
+                let errorMessage = '';
+                let docId = null;
+
+                // Update status with current row
+                statusDiv.textContent = `กำลังอัปโหลดแถวที่ ${excelRowNumber} - ${prefix} ${name || 'ไม่ระบุชื่อ'}...`;
+                statusDiv.style.color = 'orange';
+
+                console.log(`Processing row ${excelRowNumber}:`, { thID, studentID, prefix, name, surname, studyPlan, rawRow: row });
+
+                // Check for errors
+                if (!thID || !studentID || !prefix || !name || !surname || !normalizedStudyPlan) {
+                    errorMessage = 'ข้อมูลขาดหาย';
+                    statusDiv.textContent = `ข้อมูลในแถวที่ ${excelRowNumber} หาย`;
+                    statusDiv.style.color = 'red';
+                } else if (await checkDuplicateStudentID(studentID)) {
+                    errorMessage = 'รหัสนักเรียนซ้ำ';
+                    statusDiv.textContent = `รหัสนักเรียนซ้ำในแถวที่ ${excelRowNumber} - ${studentID}`;
+                    statusDiv.style.color = 'red';
+                    console.warn(`Duplicate studentID at row ${excelRowNumber}: ${studentID}`);
+                } else if (!['ISMT', 'ILEC', 'IDGT', 'IDGT + ISMT'].includes(normalizedStudyPlan)) {
+                    errorMessage = 'แผนการเรียนไม่ถูกต้อง';
+                    statusDiv.textContent = `แผนการเรียนไม่ถูกต้องในแถวที่ ${excelRowNumber}`;
+                    statusDiv.style.color = 'red';
+                    console.warn(`Unrecognized study plan at row ${excelRowNumber}: ${normalizedStudyPlan}`);
+                } else {
+                    // Process scores for valid rows
+                    if (normalizedStudyPlan === 'ISMT') {
+                        scores = {
+                            math: Number(row[10]) || 0,
+                            science: Number(row[11]) || 0,
+                            english: Number(row[12]) || 0
+                        };
+                    } else if (normalizedStudyPlan === 'ILEC') {
+                        scores = {
+                            social: Number(row[13]) || 0,
+                            chinese: Number(row[14]) || 0,
+                            thai: Number(row[15]) || 0,
+                            english: Number(row[12]) || 0
+                        };
+                    } else if (normalizedStudyPlan === 'IDGT') {
+                        scores = {
+                            math: Number(row[10]) || 0,
+                            science: Number(row[11]) || 0,
+                            english: Number(row[12]) || 0,
+                            technology: Number(row[16]) || 0
+                        };
+                    } else if (normalizedStudyPlan === 'IDGT + ISMT') {
+                        scores = {
+                            math: Number(row[10]) || 0,
+                            science: Number(row[11]) || 0,
+                            english: Number(row[12]) || 0,
+                            technology: Number(row[16]) || 0
+                        };
+                    }
+                    totalScore = calculateTotalScore(normalizedStudyPlan, scores);
+                }
+
+                // Add row to table regardless of errors
+                const tableRow = document.createElement('tr');
+                tableRow.innerHTML = `
+                    <td>${rowNumber}</td>
+                    <td>${thID || '-'}</td>
+                    <td>${studentID || 'ขาดข้อมูล'}</td>
+                    <td>${prefix || '-'}</td>
+                    <td>${name || '-'}</td>
+                    <td>${surname || '-'}</td>
+                    <td>${normalizedStudyPlan || '-'}</td>
+                    <td>${scores.math !== undefined ? scores.math : '-'}</td>
+                    <td>${scores.science !== undefined ? scores.science : '-'}</td>
+                    <td>${scores.english !== undefined ? scores.english : '-'}</td>
+                    <td>${scores.social !== undefined ? scores.social : '-'}</td>
+                    <td>${scores.chinese !== undefined ? scores.chinese : '-'}</td>
+                    <td>${scores.thai !== undefined ? scores.thai : '-'}</td>
+                    <td>${scores.technology !== undefined ? scores.technology : '-'}</td>
+                    <td>${errorMessage || totalScore}</td>
+                    <td>
+                        <button class="edit-btn">แก้ไข</button>
+                        <button class="delete-btn">ลบ</button>
+                    </td>
+                `;
+                studentTable.appendChild(tableRow);
+                rowNumber++;
+
+                // Upload to Firebase only if no errors
+                if (!errorMessage) {
+                    try {
+                        const docRef = await addDoc(collection(db, 'students'), {
+                            thID: thID,
+                            studentID: studentID,
+                            prefix: prefix,
+                            name: name,
+                            surname: surname,
+                            studyPlan: normalizedStudyPlan,
+                            scores: scores
+                        });
+                        docId = docRef.id;
+                        tableRow.setAttribute('data-id', docId);
+                        console.log(`Successfully added row ${excelRowNumber}`);
+                    } catch (error) {
+                        tableRow.cells[14].textContent = `ข้อผิดพลาด: ${error.message}`;
+                        statusDiv.textContent = `เกิดข้อผิดพลาดในแถวที่ ${excelRowNumber}: ${error.message}`;
+                        statusDiv.style.color = 'red';
+                        console.error(`Error adding row ${excelRowNumber}:`, error);
+                    }
+                }
+
+                // Add event listeners for edit and delete
+                tableRow.querySelector('.edit-btn').addEventListener('click', () => editStudentRow(docId, tableRow));
+                tableRow.querySelector('.delete-btn').addEventListener('click', async () => {
+                    if (docId) {
+                        await deleteDoc(doc(db, 'students', docId));
+                    }
+                    tableRow.remove(); // Remove from table even if not in Firebase
+                });
+            }
+
+            statusDiv.textContent = `อัปโหลดไฟล์: ${fileName} เสร็จสิ้น`;
+            statusDiv.style.color = 'green';
+        } catch (error) {
+            statusDiv.textContent = `เกิดข้อผิดพลาดในการอัปโหลดไฟล์: ${fileName} - ${error.message}`;
+            statusDiv.style.color = 'red';
+            console.error('Upload error:', error);
+        }
+    };
+
+    reader.onerror = () => {
+        statusDiv.textContent = `เกิดข้อผิดพลาดในการอ่านไฟล์: ${fileName}`;
+        statusDiv.style.color = 'red';
+    };
+
+    reader.readAsArrayBuffer(file);
+});
+
+function calculateTotalScore(studyPlan, scores) {
+    let total = 0;
+    if (studyPlan === 'ISMT') {
+        total = (scores.math || 0) + (scores.science || 0) + (scores.english || 0);
+    } else if (studyPlan === 'ILEC') {
+        total = (scores.social || 0) + (scores.chinese || 0) + (scores.thai || 0) + (scores.english || 0);
+    } else if (studyPlan === 'IDGT') {
+        total = (scores.math || 0) + (scores.science || 0) + (scores.english || 0) + (scores.technology || 0);
+    } else if (studyPlan === 'IDGT + ISMT' || studyPlan === 'ISMT + IDGT') {
+        total = (scores.math || 0) + (scores.science || 0) + (scores.english || 0) + (scores.technology || 0);
+    }
+    return total;
+}
+
+// Load and display students from Firebase
+async function loadStudents() {
+    const studentTable = document.getElementById('student-table');
+    studentTable.innerHTML = '';
+
+    const querySnapshot = await getDocs(collection(db, 'students'));
+    let rowNumber = 1;
+
+    querySnapshot.forEach((docSnapshot) => {
+        const data = docSnapshot.data();
+        const totalScore = calculateTotalScore(data.studyPlan, data.scores);
+        const row = document.createElement('tr');
+        row.setAttribute('data-id', docSnapshot.id);
+        row.innerHTML = `
+            <td>${rowNumber}</td>
+            <td>${data.thID || '-'}</td>
+            <td>${data.studentID || 'ขาดข้อมูล'}</td>
+            <td>${data.prefix || '-'}</td>
+            <td>${data.name || '-'}</td>
+            <td>${data.surname || '-'}</td>
+            <td>${data.studyPlan || '-'}</td>
+            <td>${data.scores.math !== undefined ? data.scores.math : '-'}</td>
+            <td>${data.scores.science !== undefined ? data.scores.science : '-'}</td>
+            <td>${data.scores.english !== undefined ? data.scores.english : '-'}</td>
+            <td>${data.scores.social !== undefined ? data.scores.social : '-'}</td>
+            <td>${data.scores.chinese !== undefined ? data.scores.chinese : '-'}</td>
+            <td>${data.scores.thai !== undefined ? data.scores.thai : '-'}</td>
+            <td>${data.scores.technology !== undefined ? data.scores.technology : '-'}</td>
+            <td>${totalScore}</td>
+            <td>
+                <button class="edit-btn">แก้ไข</button>
+                <button class="delete-btn">ลบ</button>
+            </td>
+        `;
+        studentTable.appendChild(row);
+        rowNumber++;
+
+        row.querySelector('.edit-btn').addEventListener('click', () => editStudentRow(docSnapshot.id, row));
+        row.querySelector('.delete-btn').addEventListener('click', async () => {
+            await deleteDoc(doc(db, 'students', docSnapshot.id));
+            loadStudents();
+        });
+    });
+}
+
+// Edit student row
+function editStudentRow(id, row) {
+    const cells = row.children;
+    const data = {
+        thID: cells[1].textContent,
+        studentID: cells[2].textContent === 'ขาดข้อมูล' ? '' : cells[2].textContent,
+        prefix: cells[3].textContent,
+        name: cells[4].textContent,
+        surname: cells[5].textContent,
+        studyPlan: cells[6].textContent,
+        scores: {
+            math: cells[7].textContent === '-' ? '' : cells[7].textContent,
+            science: cells[8].textContent === '-' ? '' : cells[8].textContent,
+            english: cells[9].textContent === '-' ? '' : cells[9].textContent,
+            social: cells[10].textContent === '-' ? '' : cells[10].textContent,
+            chinese: cells[11].textContent === '-' ? '' : cells[11].textContent,
+            thai: cells[12].textContent === '-' ? '' : cells[12].textContent,
+            technology: cells[13].textContent === '-' ? '' : cells[13].textContent
+        }
+    };
+    const totalScore = calculateTotalScore(data.studyPlan, data.scores);
+
+    cells[1].innerHTML = `<input type="text" value="${data.thID}" maxlength="13">`;
+    cells[2].innerHTML = `<input type="text" value="${data.studentID}" maxlength="8">`;
+    cells[3].innerHTML = `
+        <select>
+            <option value="เด็กชาย" ${data.prefix === 'เด็กชาย' ? 'selected' : ''}>เด็กชาย</option>
+            <option value="เด็กหญิง" ${data.prefix === 'เด็กหญิง' ? 'selected' : ''}>เด็กหญิง</option>
+            <option value="นาย" ${data.prefix === 'นาย' ? 'selected' : ''}>นาย</option>
+            <option value="นางสาว" ${data.prefix === 'นางสาว' ? 'selected' : ''}>นางสาว</option>
+        </select>`;
+    cells[4].innerHTML = `<input type="text" value="${data.name}">`;
+    cells[5].innerHTML = `<input type="text" value="${data.surname}">`;
+    cells[6].innerHTML = `
+        <select>
+            <option value="ISMT" ${data.studyPlan === 'ISMT' ? 'selected' : ''}>ISMT</option>
+            <option value="ILEC" ${data.studyPlan === 'ILEC' ? 'selected' : ''}>ILEC</option>
+            <option value="IDGT" ${data.studyPlan === 'IDGT' ? 'selected' : ''}>IDGT</option>
+            <option value="IDGT + ISMT" ${data.studyPlan === 'IDGT + ISMT' ? 'selected' : ''}>IDGT + ISMT</option>
+        </select>`;
+    cells[7].innerHTML = `<input type="number" value="${data.scores.math}" min="0" max="40" ${data.studyPlan === 'ISMT' || data.studyPlan === 'IDGT' || data.studyPlan === 'IDGT + ISMT' ? '' : 'disabled'}>`;
+    cells[8].innerHTML = `<input type="number" value="${data.scores.science}" min="0" max="60" ${data.studyPlan === 'ISMT' || data.studyPlan === 'IDGT' || data.studyPlan === 'IDGT + ISMT' ? '' : 'disabled'}>`;
+    cells[9].innerHTML = `<input type="number" value="${data.scores.english}" min="0" max="50">`;
+    cells[10].innerHTML = `<input type="number" value="${data.scores.social}" min="0" max="60" ${data.studyPlan === 'ILEC' ? '' : 'disabled'}>`;
+    cells[11].innerHTML = `<input type="number" value="${data.scores.chinese}" min="0" max="40" ${data.studyPlan === 'ILEC' ? '' : 'disabled'}>`;
+    cells[12].innerHTML = `<input type="number" value="${data.scores.thai}" min="0" max="60" ${data.studyPlan === 'ILEC' ? '' : 'disabled'}>`;
+    cells[13].innerHTML = `<input type="number" value="${data.scores.technology}" min="0" max="80" ${data.studyPlan === 'IDGT' || data.studyPlan === 'IDGT + ISMT' ? '' : 'disabled'}>`;
+    cells[14].innerHTML = `<span>${totalScore}</span>`;
+    cells[15].innerHTML = `
+        <button class="save-btn" data-id="${id}">บันทึก</button>
+        <button class="cancel-btn" data-id="${id}">ยกเลิก</button>
+    `;
+
+    cells[15].querySelector('.save-btn').addEventListener('click', () => saveStudent(id, row));
+    cells[15].querySelector('.cancel-btn').addEventListener('click', () => loadStudents());
+}
+
+// Save edited student (handles both updates and new additions)
+async function saveStudent(id, row) {
+    const cells = row.children;
+    const studentID = cells[2].querySelector('input').value;
+    const studyPlan = cells[6].querySelector('select').value;
+
+    if (!studentID || !cells[1].querySelector('input').value || !cells[3].querySelector('select').value || !cells[4].querySelector('input').value || !cells[5].querySelector('input').value || !studyPlan) {
+        alert('กรุณากรอกข้อมูลให้ครบถ้วน');
+        return;
+    }
+
+    if (studentID && await checkDuplicateStudentID(studentID, id)) {
+        alert('รหัสนักเรียนนี้มีอยู่ในระบบแล้ว');
+        return;
+    }
+
+    let scores = {};
+    if (studyPlan === 'ISMT') {
+        scores = {
+            math: parseInt(cells[7].querySelector('input').value) || 0,
+            science: parseInt(cells[8].querySelector('input').value) || 0,
+            english: parseInt(cells[9].querySelector('input').value) || 0
+        };
+    } else if (studyPlan === 'ILEC') {
+        scores = {
+            social: parseInt(cells[10].querySelector('input').value) || 0,
+            chinese: parseInt(cells[11].querySelector('input').value) || 0,
+            thai: parseInt(cells[12].querySelector('input').value) || 0,
+            english: parseInt(cells[9].querySelector('input').value) || 0
+        };
+    } else if (studyPlan === 'IDGT') {
+        scores = {
+            math: parseInt(cells[7].querySelector('input').value) || 0,
+            science: parseInt(cells[8].querySelector('input').value) || 0,
+            english: parseInt(cells[9].querySelector('input').value) || 0,
+            technology: parseInt(cells[13].querySelector('input').value) || 0
+        };
+    } else if (studyPlan === 'IDGT + ISMT') {
+        scores = {
+            math: parseInt(cells[7].querySelector('input').value) || 0,
+            science: parseInt(cells[8].querySelector('input').value) || 0,
+            english: parseInt(cells[9].querySelector('input').value) || 0,
+            technology: parseInt(cells[13].querySelector('input').value) || 0
+        };
+    }
+
+    try {
+        if (id) {
+            // Update existing document
+            await updateDoc(doc(db, 'students', id), {
+                thID: cells[1].querySelector('input').value,
+                studentID: studentID,
+                prefix: cells[3].querySelector('select').value,
+                name: cells[4].querySelector('input').value,
+                surname: cells[5].querySelector('input').value,
+                studyPlan: studyPlan,
+                scores: scores
+            });
+            alert('แก้ไขข้อมูลสำเร็จ');
+        } else {
+            // Add new document
+            const docRef = await addDoc(collection(db, 'students'), {
+                thID: cells[1].querySelector('input').value,
+                studentID: studentID,
+                prefix: cells[3].querySelector('select').value,
+                name: cells[4].querySelector('input').value,
+                surname: cells[5].querySelector('input').value,
+                studyPlan: studyPlan,
+                scores: scores
+            });
+            row.setAttribute('data-id', docRef.id);
+            alert('เพิ่มข้อมูลสำเร็จ');
+        }
+        loadStudents();
+    } catch (error) {
+        console.error('Error saving student:', error);
+        alert('เกิดข้อผิดพลาดในการบันทึกข้อมูล');
+    }
+}
+
+// Search functionality
+document.getElementById('search-btn').addEventListener('click', async () => {
+    const searchInput = document.getElementById('search-input').value.toLowerCase();
+    const studentTable = document.getElementById('student-table');
+    studentTable.innerHTML = '';
+
+    const querySnapshot = await getDocs(collection(db, 'students'));
+    let rowNumber = 1;
+
+    querySnapshot.forEach((docSnapshot) => {
+        const data = docSnapshot.data();
+        const fullName = `${data.name || ''} ${data.surname || ''}`.toLowerCase();
+        if (fullName.includes(searchInput) || (data.studentID || '').includes(searchInput) || (data.thID || '').includes(searchInput)) {
+            const totalScore = calculateTotalScore(data.studyPlan, data.scores);
+            const row = document.createElement('tr');
+            row.setAttribute('data-id', docSnapshot.id);
+            row.innerHTML = `
+                <td>${rowNumber}</td>
+                <td>${data.thID || '-'}</td>
+                <td>${data.studentID || 'ขาดข้อมูล'}</td>
+                <td>${data.prefix || '-'}</td>
+                <td>${data.name || '-'}</td>
+                <td>${data.surname || '-'}</td>
+                <td>${data.studyPlan || '-'}</td>
+                <td>${data.scores.math !== undefined ? data.scores.math : '-'}</td>
+                <td>${data.scores.science !== undefined ? data.scores.science : '-'}</td>
+                <td>${data.scores.english !== undefined ? data.scores.english : '-'}</td>
+                <td>${data.scores.social !== undefined ? data.scores.social : '-'}</td>
+                <td>${data.scores.chinese !== undefined ? data.scores.chinese : '-'}</td>
+                <td>${data.scores.thai !== undefined ? data.scores.thai : '-'}</td>
+                <td>${data.scores.technology !== undefined ? data.scores.technology : '-'}</td>
+                <td>${totalScore}</td>
+                <td>
+                    <button class="edit-btn">แก้ไข</button>
+                    <button class="delete-btn">ลบ</button>
+                </td>
+            `;
+            studentTable.appendChild(row);
+            rowNumber++;
+
+            row.querySelector('.edit-btn').addEventListener('click', () => editStudentRow(docSnapshot.id, row));
+            row.querySelector('.delete-btn').addEventListener('click', async () => {
+                await deleteDoc(doc(db, 'students', docSnapshot.id));
+                loadStudents();
+            });
+        }
+    });
+});
