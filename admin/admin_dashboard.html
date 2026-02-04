@@ -71,7 +71,7 @@
                         <option value="ISMT">วิทยาศาสตร์ คณิตศาสตร์ และเทคโนโลยี</option>
                         <option value="ILEC">ภาษาต่างประเทศ (อังกฤษ - จีน)</option>
                         <option value="IDGT">เทคโนโลยีดิจิทัล</option>
-                        <option value="IDGT + ISMT">วิทยาศาสตร์ คณิตศาสตร์ และเทคโนโลยีดิจิทัล</option>
+                        <option value="IDGT + ISMT">วิทยาศาสตร์ คณิตศาสตร์ เทคโนโลยีดิจิทัล</option>
                     </select>
                 </div>
             </div>
@@ -114,51 +114,11 @@
 
     <!-- Excel upload button and status -->
     <div class="mb-6 flex flex-wrap gap-4 items-center bg-white p-4 rounded-xl shadow-md border-l-4 border-gray-400">
-        <div class="flex items-center gap-2">
-            <button id="upload-excel-btn" class="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-lg transition duration-200 flex items-center gap-2 shadow-sm">
-                <span>📄</span> อัปโหลดไฟล์ Excel
-            </button>
-            <input type="file" id="excel-file" accept=".xlsx" style="display: none;">
-            
-            <!-- Excel Template Example Link -->
-            <a href="#" onclick="alert('ลำดับคอลัมน์ใน Excel:\nA1: thID (รหัสบัตรประชาขน)\nB1: prefix (คำนำหน้า)\nC1: name (ชื่อ)\nD1: surname (นามสกุล)\nE1: studentID (รหัสผู้เข้าสอบ)\nF1: study_plan (แผนการเรียน)\nG1: score1 (วิชา 1)\nH1: score2 (วิชา 2)\n...')"
-               class="ml-2 text-sm text-blue-600 hover:text-blue-800 underline flex items-center gap-1">
-                <span>ℹ️</span> ดูตัวอย่างรูปแบบไฟล์
-            </a>
-        </div>
-        <div id="upload-status" class="text-sm text-gray-600 w-full md:w-auto"></div>
-        
-        <!-- Excel Format Example Box -->
-        <div class="w-full mt-2 p-3 bg-gray-50 rounded-lg border border-gray-200 text-xs text-gray-600 overflow-x-auto">
-            <p class="font-bold mb-1">รูปแบบไฟล์ Excel (.xlsx) ที่ถูกต้อง:</p>
-            <table class="min-w-full border-collapse border border-gray-300">
-                <thead>
-                    <tr class="bg-gray-100">
-                        <th class="border border-gray-300 px-2 py-1">thID</th>
-                        <th class="border border-gray-300 px-2 py-1">prefix</th>
-                        <th class="border border-gray-300 px-2 py-1">name</th>
-                        <th class="border border-gray-300 px-2 py-1">surname</th>
-                        <th class="border border-gray-300 px-2 py-1">studentID</th>
-                        <th class="border border-gray-300 px-2 py-1">study_plan</th>
-                        <th class="border border-gray-300 px-2 py-1 text-center" colspan="4">scores (math, science, english, etc.)</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td class="border border-gray-300 px-2 py-1 font-mono">1234567890123</td>
-                        <td class="border border-gray-300 px-2 py-1">เด็กชาย</td>
-                        <td class="border border-gray-300 px-2 py-1">ใจดี</td>
-                        <td class="border border-gray-300 px-2 py-1">มีสุข</td>
-                        <td class="border border-gray-300 px-2 py-1 font-mono">660001</td>
-                        <td class="border border-gray-300 px-2 py-1 font-mono">ISMT</td>
-                        <td class="border border-gray-300 px-2 py-1 text-center">25</td>
-                        <td class="border border-gray-300 px-2 py-1 text-center">40</td>
-                        <td class="border border-gray-300 px-2 py-1 text-center">35</td>
-                        <td class="border border-gray-300 px-2 py-1 text-center">...</td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
+        <button id="upload-excel-btn" class="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-lg transition duration-200 flex items-center gap-2 shadow-sm">
+            <span>📄</span> อัปโหลดไฟล์ Excel
+        </button>
+        <input type="file" id="excel-file" accept=".xlsx" style="display: none;">
+        <div id="upload-status" class="text-sm text-gray-600"></div>
     </div>
 
     <!-- Search and table -->

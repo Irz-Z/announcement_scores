@@ -498,7 +498,7 @@ async function saveStudent(id, row) {
 
 // Search functionality
 document.getElementById('search-btn').addEventListener('click', async () => {
-    const searchInput = document.getElementById('search-input').value.toLowerCase();
+    const searchInput = document.getElementById('search-input').value.trim().toLowerCase();
     const studentTable = document.getElementById('student-table');
     studentTable.innerHTML = '';
 
@@ -507,8 +507,21 @@ document.getElementById('search-btn').addEventListener('click', async () => {
 
     querySnapshot.forEach((docSnapshot) => {
         const data = docSnapshot.data();
-        const fullName = `${data.name || ''} ${data.surname || ''}`.toLowerCase();
-        if (fullName.includes(searchInput) || (data.studentID || '').includes(searchInput) || (data.thID || '').includes(searchInput)) {
+        
+        // Prepare searchable fields (case-insensitive)
+        const name = (data.name || '').toLowerCase();
+        const surname = (data.surname || '').toLowerCase();
+        const fullName = `${name} ${surname}`;
+        const studentID = (data.studentID || '').toString().toLowerCase();
+        const thID = (data.thID || '').toString().toLowerCase();
+
+        // Check against Name, Surname, Fullname, Student ID, and ID Card
+        if (name.includes(searchInput) || 
+            surname.includes(searchInput) || 
+            fullName.includes(searchInput) || 
+            studentID.includes(searchInput) || 
+            thID.includes(searchInput)) {
+
             const totalScore = calculateTotalScore(data.studyPlan, data.scores);
             const row = document.createElement('tr');
             row.setAttribute('data-id', docSnapshot.id);
