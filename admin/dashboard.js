@@ -112,6 +112,35 @@ document.getElementById('add-student-form').addEventListener('submit', async (e)
 });
 
 // Handle Excel upload and stop if no data
+document.getElementById('download-template-btn').addEventListener('click', () => {
+    const wb = XLSX.utils.book_new();
+    const ws_data = [
+        [
+            "รหัสบัตรประชาชน", "รหัสผู้เข้าสอบ", "", "", "", "", "คำนำหน้า", "ชื่อ", "นามสกุล", "แผนการเรียน",
+            "คะแนนคณิต", "คะแนนวิทย์", "คะแนนอังกฤษ", "คะแนนสังคม", "คะแนนจีน", "คะแนนไทย", "คะแนนเทคโนโลยี"
+        ],
+        [
+            "1234567890123", "67001", "", "", "", "", "เด็กชาย", "ตัวอย่าง", "ใจดี", "ISMT",
+            "35", "55", "45", "", "", "", ""
+        ],
+        [
+            "1234567890124", "67002", "", "", "", "", "เด็กหญิง", "มานี", "มีตา", "ILEC",
+            "", "", "40", "50", "35", "55", ""
+        ]
+    ];
+    const ws = XLSX.utils.aoa_to_sheet(ws_data);
+    
+    // Set column widths
+    const wscols = [
+        {wch: 15}, {wch: 10}, {wch: 5}, {wch: 5}, {wch: 5}, {wch: 5}, {wch: 10}, {wch: 15}, {wch: 15}, {wch: 15},
+        {wch: 10}, {wch: 10}, {wch: 10}, {wch: 10}, {wch: 10}, {wch: 10}, {wch: 10}
+    ];
+    ws['!cols'] = wscols;
+
+    XLSX.utils.book_append_sheet(wb, ws, "Template");
+    XLSX.writeFile(wb, "import_template.xlsx");
+});
+
 document.getElementById('upload-excel-btn').addEventListener('click', () => {
     document.getElementById('excel-file').click();
 });
