@@ -105,7 +105,7 @@ function showSections(plan) {
         toggleSections(["math-section", "science-section", "english-section"]);
     } else if (plan === "ILEC") {
         toggleSections(["chinese-section", "social-section", "thai-section", "english-section"]);
-    } else if (plan === "IDGT" || plan === "IDGT + ISMT") {
+    } else if (plan === "IDGT") {
         toggleSections(["math-section", "science-section", "english-section", "technology-section"]);
     }
 }

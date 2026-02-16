@@ -1,4 +1,152 @@
-import { auth, db, onAuthStateChanged, signOut, collection, getDocs, addDoc, deleteDoc, doc, updateDoc, query, where } from './firebase.js';
+import { auth, db, onAuthStateChanged, signOut, collection, getDocs, addDoc, deleteDoc, doc, updateDoc, query, where, setDoc } from './firebase.js';
+
+const SUBJECTS = {
+    math: { label: 'คณิตศาสตร์', fullMark: 40 },
+    science: { label: 'วิทยาศาสตร์', fullMark: 60 },
+    english: { label: 'ภาษาอังกฤษ', fullMark: 50 },
+    social: { label: 'สังคมศึกษา', fullMark: 60 },
+    chinese: { label: 'ภาษาจีน', fullMark: 40 },
+    thai: { label: 'ภาษาไทย', fullMark: 60 },
+    technology: { label: 'เทคโนโลยี', fullMark: 80 }
+};
+
+const PLAN_SUBJECTS = {
+    ISMT: ['math', 'science', 'english'],
+    ILEC: ['social', 'chinese', 'thai', 'english'],
+    IDGT: ['math', 'science', 'english', 'technology']
+};
+
+const PLAN_LABELS = {
+    ISMT: 'โครงการห้องเรียนพิเศษวิทยาศาสตร์ คณิตศาสตร์และเทคโนโลยี (ISMT)',
+    ILEC: 'โครงการห้องเรียนพิเศษภาษาต่างประเทศ (อังกฤษ-จีน) (ILEC)',
+    IDGT: 'โครงการห้องเรียนพิเศษเทคโนโลยีดิจิทัล (IDGT)'
+};
+
+function normalizeStudyPlan(plan) {
+    const normalized = String(plan || '').trim();
+    return normalized;
+}
+
+function toNumber(value) {
+    const n = Number(value);
+    return Number.isFinite(n) ? n : 0;
+}
+
+function formatNumber(value, digits = 2) {
+    if (value === null || value === undefined) return '-';
+    const n = Number(value);
+    if (!Number.isFinite(n)) return '-';
+    return digits === 0 ? String(Math.round(n)) : n.toFixed(digits);
+}
+
+function renderStudyPlanStats(students) {
+    const container = document.getElementById('plan-stats-content');
+    if (!container) return;
+
+    const planKeys = Object.keys(PLAN_SUBJECTS);
+    const stats = {};
+    planKeys.forEach((planKey) => {
+        stats[planKey] = {
+            count: 0,
+            sums: {},
+            maxs: {}
+        };
+        PLAN_SUBJECTS[planKey].forEach((subjectKey) => {
+            stats[planKey].sums[subjectKey] = 0;
+            stats[planKey].maxs[subjectKey] = -Infinity;
+        });
+    });
+
+    (students || []).forEach((student) => {
+        const plan = normalizeStudyPlan(student.studyPlan);
+        if (!PLAN_SUBJECTS[plan]) return;
+        stats[plan].count += 1;
+        PLAN_SUBJECTS[plan].forEach((subjectKey) => {
+            const scoreValue = toNumber(student.scores?.[subjectKey]);
+            stats[plan].sums[subjectKey] += scoreValue;
+            stats[plan].maxs[subjectKey] = Math.max(stats[plan].maxs[subjectKey], scoreValue);
+        });
+    });
+
+    // Publish aggregated stats for student page consumption
+    publishStudyPlanStats(stats).catch((e) => {
+        console.error('Failed to publish study plan stats:', e);
+    });
+
+    container.innerHTML = planKeys.map((planKey) => {
+        const planStat = stats[planKey];
+        const count = planStat.count;
+        const rowsHtml = PLAN_SUBJECTS[planKey].map((subjectKey) => {
+            const subject = SUBJECTS[subjectKey];
+            const fullMark = subject?.fullMark;
+            const max = count > 0 ? planStat.maxs[subjectKey] : null;
+            const avg = count > 0 ? (planStat.sums[subjectKey] / count) : null;
+            return `
+                <tr class="border-b border-gray-100">
+                    <td class="py-2 pr-2 text-gray-700">${subject?.label || subjectKey}</td>
+                    <td class="py-2 px-2 text-center text-gray-700">${formatNumber(fullMark, 0)}</td>
+                    <td class="py-2 px-2 text-center text-gray-700">${max === null ? '-' : formatNumber(max, 0)}</td>
+                    <td class="py-2 pl-2 text-center text-gray-700">${avg === null ? '-' : formatNumber(avg, 2)}</td>
+                </tr>
+            `;
+        }).join('');
+
+        return `
+            <div class="border border-gray-100 rounded-xl p-4 bg-white">
+                <div class="flex items-center justify-between mb-3">
+                    <div class="font-bold text-gray-800">${PLAN_LABELS[planKey] || planKey}</div>
+                    <div class="text-sm text-gray-600">จำนวนผู้เข้าสอบ: <span class="font-semibold text-primary">${count}</span></div>
+                </div>
+                <div class="overflow-x-auto rounded-lg border border-gray-100">
+                    <table class="min-w-full text-sm">
+                        <thead>
+                            <tr class="bg-blue-50 text-gray-700 text-xs uppercase">
+                                <th class="py-2 px-3 text-left font-bold">วิชา</th>
+                                <th class="py-2 px-3 text-center font-bold">เต็ม</th>
+                                <th class="py-2 px-3 text-center font-bold">สูงสุด</th>
+                                <th class="py-2 px-3 text-center font-bold">เฉลี่ย</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${rowsHtml}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+async function publishStudyPlanStats(statsByPlan) {
+    const planKeys = Object.keys(PLAN_SUBJECTS);
+    const updates = planKeys.map(async (planKey) => {
+        const planStat = statsByPlan?.[planKey];
+        if (!planStat) return;
+
+        const count = planStat.count || 0;
+        const subjects = {};
+        PLAN_SUBJECTS[planKey].forEach((subjectKey) => {
+            const sum = planStat.sums?.[subjectKey] || 0;
+            const max = count > 0 ? planStat.maxs?.[subjectKey] : null;
+            const avg = count > 0 ? (sum / count) : null;
+            subjects[subjectKey] = {
+                max: max === null ? null : Number(max),
+                avg: avg === null ? null : Number(avg)
+            };
+        });
+
+        const payload = {
+            planKey,
+            count: Number(count),
+            subjects,
+            updatedAt: new Date().toISOString()
+        };
+
+        await setDoc(doc(db, 'studyPlanStats', planKey), payload);
+    });
+
+    await Promise.all(updates);
+}
 
 // Check admin authentication state
 onAuthStateChanged(auth, (user) => {
@@ -20,7 +168,8 @@ document.getElementById('logout-btn').addEventListener('click', () => {
 });
 
 // Show/hide score fields based on study plan
-document.getElementById("study-plan").addEventListener("change", function () {
+const studyPlanSelectEl = document.getElementById("study-plan");
+studyPlanSelectEl?.addEventListener("change", function () {
     const plan = this.value;
     const sections = [
         "math-section", "science-section", "english-section",
@@ -34,10 +183,11 @@ document.getElementById("study-plan").addEventListener("change", function () {
         showSections(["chinese-section", "social-section", "thai-section", "english-section"]);
     } else if (plan === "IDGT") {
         showSections(["math-section", "science-section", "english-section", "technology-section"]);
-    } else if (plan === "IDGT + ISMT") {
-        showSections(["math-section", "science-section", "english-section", "technology-section"]);
     }
 });
+
+// Ensure score fields are visible immediately for the default/selected plan
+studyPlanSelectEl?.dispatchEvent(new Event('change'));
 
 function showSections(sectionIds) {
     sectionIds.forEach(section => document.getElementById(section).classList.remove("hidden"));
@@ -77,13 +227,6 @@ document.getElementById('add-student-form').addEventListener('submit', async (e)
             thai: parseInt(formData.get('thai')) || 0
         };
     } else if (studyPlan === 'IDGT') {
-        scores = {
-            math: parseInt(formData.get('math')) || 0,
-            science: parseInt(formData.get('science')) || 0,
-            english: parseInt(formData.get('english')) || 0,
-            technology: parseInt(formData.get('technology')) || 0
-        };
-    } else if (studyPlan === 'IDGT + ISMT') {
         scores = {
             math: parseInt(formData.get('math')) || 0,
             science: parseInt(formData.get('science')) || 0,
@@ -215,7 +358,7 @@ document.getElementById('excel-file').addEventListener('change', (event) => {
                     statusDiv.textContent = `รหัสนักเรียนซ้ำในแถวที่ ${excelRowNumber} - ${studentID}`;
                     statusDiv.style.color = 'red';
                     console.warn(`Duplicate studentID at row ${excelRowNumber}: ${studentID}`);
-                } else if (!['ISMT', 'ILEC', 'IDGT', 'IDGT + ISMT'].includes(normalizedStudyPlan)) {
+                } else if (!['ISMT', 'ILEC', 'IDGT'].includes(normalizedStudyPlan)) {
                     errorMessage = 'แผนการเรียนไม่ถูกต้อง';
                     statusDiv.textContent = `แผนการเรียนไม่ถูกต้องในแถวที่ ${excelRowNumber}`;
                     statusDiv.style.color = 'red';
@@ -236,13 +379,6 @@ document.getElementById('excel-file').addEventListener('change', (event) => {
                             english: Number(row[12]) || 0
                         };
                     } else if (normalizedStudyPlan === 'IDGT') {
-                        scores = {
-                            math: Number(row[10]) || 0,
-                            science: Number(row[11]) || 0,
-                            english: Number(row[12]) || 0,
-                            technology: Number(row[16]) || 0
-                        };
-                    } else if (normalizedStudyPlan === 'IDGT + ISMT') {
                         scores = {
                             math: Number(row[10]) || 0,
                             science: Number(row[11]) || 0,
@@ -337,8 +473,6 @@ function calculateTotalScore(studyPlan, scores) {
         total = (scores.social || 0) + (scores.chinese || 0) + (scores.thai || 0) + (scores.english || 0);
     } else if (studyPlan === 'IDGT') {
         total = (scores.math || 0) + (scores.science || 0) + (scores.english || 0) + (scores.technology || 0);
-    } else if (studyPlan === 'IDGT + ISMT' || studyPlan === 'ISMT + IDGT') {
-        total = (scores.math || 0) + (scores.science || 0) + (scores.english || 0) + (scores.technology || 0);
     }
     return total;
 }
@@ -349,6 +483,8 @@ async function loadStudents() {
     studentTable.innerHTML = '';
 
     const querySnapshot = await getDocs(collection(db, 'students'));
+    const allStudents = querySnapshot.docs.map((d) => d.data());
+    renderStudyPlanStats(allStudents);
     let rowNumber = 1;
 
     querySnapshot.forEach((docSnapshot) => {
@@ -426,15 +562,14 @@ function editStudentRow(id, row) {
             <option value="ISMT" ${data.studyPlan === 'ISMT' ? 'selected' : ''}>ISMT</option>
             <option value="ILEC" ${data.studyPlan === 'ILEC' ? 'selected' : ''}>ILEC</option>
             <option value="IDGT" ${data.studyPlan === 'IDGT' ? 'selected' : ''}>IDGT</option>
-            <option value="IDGT + ISMT" ${data.studyPlan === 'IDGT + ISMT' ? 'selected' : ''}>IDGT + ISMT</option>
         </select>`;
-    cells[7].innerHTML = `<input type="number" value="${data.scores.math}" min="0" max="40" ${data.studyPlan === 'ISMT' || data.studyPlan === 'IDGT' || data.studyPlan === 'IDGT + ISMT' ? '' : 'disabled'}>`;
-    cells[8].innerHTML = `<input type="number" value="${data.scores.science}" min="0" max="60" ${data.studyPlan === 'ISMT' || data.studyPlan === 'IDGT' || data.studyPlan === 'IDGT + ISMT' ? '' : 'disabled'}>`;
+    cells[7].innerHTML = `<input type="number" value="${data.scores.math}" min="0" max="40" ${data.studyPlan === 'ISMT' || data.studyPlan === 'IDGT' ? '' : 'disabled'}>`;
+    cells[8].innerHTML = `<input type="number" value="${data.scores.science}" min="0" max="60" ${data.studyPlan === 'ISMT' || data.studyPlan === 'IDGT' ? '' : 'disabled'}>`;
     cells[9].innerHTML = `<input type="number" value="${data.scores.english}" min="0" max="50">`;
     cells[10].innerHTML = `<input type="number" value="${data.scores.social}" min="0" max="60" ${data.studyPlan === 'ILEC' ? '' : 'disabled'}>`;
     cells[11].innerHTML = `<input type="number" value="${data.scores.chinese}" min="0" max="40" ${data.studyPlan === 'ILEC' ? '' : 'disabled'}>`;
     cells[12].innerHTML = `<input type="number" value="${data.scores.thai}" min="0" max="60" ${data.studyPlan === 'ILEC' ? '' : 'disabled'}>`;
-    cells[13].innerHTML = `<input type="number" value="${data.scores.technology}" min="0" max="80" ${data.studyPlan === 'IDGT' || data.studyPlan === 'IDGT + ISMT' ? '' : 'disabled'}>`;
+    cells[13].innerHTML = `<input type="number" value="${data.scores.technology}" min="0" max="80" ${data.studyPlan === 'IDGT' ? '' : 'disabled'}>`;
     cells[14].innerHTML = `<span>${totalScore}</span>`;
     cells[15].innerHTML = `
         <button class="save-btn" data-id="${id}">บันทึก</button>

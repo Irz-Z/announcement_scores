@@ -1,6 +1,6 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth, signOut, onAuthStateChanged } from 'firebase/auth';
-import { getFirestore, collection, getDocs, addDoc, deleteDoc, doc } from 'firebase/firestore';
+import { getFirestore, collection, getDocs, addDoc, deleteDoc, doc, query, where, limit, getDoc } from 'firebase/firestore';
 
 // Firebase configuration using environment variables
 const firebaseConfig = {
@@ -19,4 +19,4 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 
 // Export all required functions
-export { auth, db, collection, getDocs, addDoc, deleteDoc, doc, signOut, onAuthStateChanged };
+export { auth, db, collection, getDocs, addDoc, deleteDoc, doc, signOut, onAuthStateChanged, query, where, limit, getDoc };

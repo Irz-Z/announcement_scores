@@ -3,7 +3,7 @@
 // Import Firebase SDK from CDN
 import { initializeApp } from 'firebase/app';
 import { getAuth, onAuthStateChanged, signOut } from 'firebase/auth';
-import { getFirestore, collection, getDocs, addDoc, deleteDoc, doc, updateDoc, query, where } from 'firebase/firestore';
+import { getFirestore, collection, getDocs, addDoc, deleteDoc, doc, updateDoc, query, where, setDoc } from 'firebase/firestore';
 
 // Firebase configuration using environment variables
 const firebaseConfig = {
@@ -36,5 +36,6 @@ export {
     doc, 
     updateDoc, 
     query, 
-    where 
+  where,
+  setDoc
 };
