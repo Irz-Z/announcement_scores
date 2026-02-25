@@ -22,6 +22,137 @@ const PLAN_LABELS = {
     IDGT: 'โครงการห้องเรียนพิเศษเทคโนโลยีดิจิทัล (IDGT)'
 };
 
+// ============= Column Mapping Config =============
+// Default column mappings (A=0, B=1, ..., Q=16)
+const DEFAULT_COL_MAP = {
+    thID: 'A',
+    studentID: 'B',
+    prefix: 'G',
+    name: 'H',
+    surname: 'I',
+    studyPlan: 'J',
+    math: 'K',
+    science: 'L',
+    english: 'M',
+    social: 'N',
+    chinese: 'O',
+    thai: 'P',
+    technology: 'Q'
+};
+
+const COL_FIELD_LABELS = {
+    thID: 'รหัสบัตรประชาชน',
+    studentID: 'รหัสผู้เข้าสอบ',
+    prefix: 'คำนำหน้า',
+    name: 'ชื่อ',
+    surname: 'นามสกุล',
+    studyPlan: 'แผนการเรียน',
+    math: 'คณิตศาสตร์',
+    science: 'วิทยาศาสตร์',
+    english: 'ภาษาอังกฤษ',
+    social: 'สังคมศึกษา',
+    chinese: 'ภาษาจีน',
+    thai: 'ภาษาไทย',
+    technology: 'เทคโนโลยี'
+};
+
+let uploadConfig = null; // Will be set when modal confirms
+
+function columnLetterToIndex(letter) {
+    return letter.toUpperCase().charCodeAt(0) - 65; // A=0, B=1, ..., Z=25
+}
+
+function indexToColumnLetter(idx) {
+    return String.fromCharCode(65 + idx); // 0=A, 1=B, ..., 25=Z
+}
+
+// Initialize column mapping modal dropdowns
+function initColumnMappingModal() {
+    const selects = document.querySelectorAll('.col-map-select');
+    const letters = [];
+    for (let i = 0; i < 26; i++) {
+        letters.push(String.fromCharCode(65 + i));
+    }
+
+    selects.forEach(select => {
+        select.innerHTML = letters.map(l => `<option value="${l}">${l}</option>`).join('');
+    });
+
+    // Set defaults
+    Object.keys(DEFAULT_COL_MAP).forEach(field => {
+        const el = document.getElementById(`map-${field}`);
+        if (el) el.value = DEFAULT_COL_MAP[field];
+    });
+
+    updateMappingPreview();
+}
+
+function updateMappingPreview() {
+    const previewContent = document.getElementById('mapping-preview-content');
+    if (!previewContent) return;
+
+    const startRow = document.getElementById('map-start-row')?.value || '2';
+    let html = `<div class="mb-1">แถวเริ่มต้น: <strong>${startRow}</strong></div>`;
+    html += '<div class="grid grid-cols-2 md:grid-cols-3 gap-1">';
+
+    Object.keys(DEFAULT_COL_MAP).forEach(field => {
+        const el = document.getElementById(`map-${field}`);
+        const val = el ? el.value : DEFAULT_COL_MAP[field];
+        html += `<div>${COL_FIELD_LABELS[field]}: <strong>คอลัมน์ ${val}</strong></div>`;
+    });
+
+    html += '</div>';
+    previewContent.innerHTML = html;
+}
+
+function openMappingModal() {
+    const modal = document.getElementById('column-mapping-modal');
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+    initColumnMappingModal();
+}
+
+function closeMappingModal() {
+    const modal = document.getElementById('column-mapping-modal');
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+}
+
+function getUploadConfigFromModal() {
+    const startRow = parseInt(document.getElementById('map-start-row').value) || 2;
+    const config = { startRow };
+
+    Object.keys(DEFAULT_COL_MAP).forEach(field => {
+        const el = document.getElementById(`map-${field}`);
+        config[field] = columnLetterToIndex(el ? el.value : DEFAULT_COL_MAP[field]);
+    });
+
+    return config;
+}
+
+// Attach change listeners for live preview
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.col-map-select').forEach(s => {
+        s.addEventListener('change', updateMappingPreview);
+    });
+    const startRowEl = document.getElementById('map-start-row');
+    if (startRowEl) startRowEl.addEventListener('input', updateMappingPreview);
+});
+
+// Modal open/close handlers
+document.getElementById('mapping-modal-close')?.addEventListener('click', closeMappingModal);
+document.getElementById('mapping-cancel-btn')?.addEventListener('click', closeMappingModal);
+document.getElementById('mapping-confirm-btn')?.addEventListener('click', () => {
+    uploadConfig = getUploadConfigFromModal();
+    closeMappingModal();
+    document.getElementById('excel-file').click();
+});
+
+// Close modal on backdrop click
+document.getElementById('column-mapping-modal')?.addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) closeMappingModal();
+});
+
 function normalizeStudyPlan(plan) {
     const normalized = String(plan || '').trim();
     return normalized;
@@ -285,7 +416,7 @@ document.getElementById('download-template-btn').addEventListener('click', () =>
 });
 
 document.getElementById('upload-excel-btn').addEventListener('click', () => {
-    document.getElementById('excel-file').click();
+    openMappingModal();
 });
 
 document.getElementById('excel-file').addEventListener('change', (event) => {
@@ -318,9 +449,29 @@ document.getElementById('excel-file').addEventListener('change', (event) => {
             studentTable.innerHTML = '';
             let rowNumber = 1;
 
-            for (let i = 1; i < jsonData.length; i++) {
+            // Use dynamic config or fallback to defaults
+            const cfg = uploadConfig || {
+                startRow: 2,
+                thID: columnLetterToIndex(DEFAULT_COL_MAP.thID),
+                studentID: columnLetterToIndex(DEFAULT_COL_MAP.studentID),
+                prefix: columnLetterToIndex(DEFAULT_COL_MAP.prefix),
+                name: columnLetterToIndex(DEFAULT_COL_MAP.name),
+                surname: columnLetterToIndex(DEFAULT_COL_MAP.surname),
+                studyPlan: columnLetterToIndex(DEFAULT_COL_MAP.studyPlan),
+                math: columnLetterToIndex(DEFAULT_COL_MAP.math),
+                science: columnLetterToIndex(DEFAULT_COL_MAP.science),
+                english: columnLetterToIndex(DEFAULT_COL_MAP.english),
+                social: columnLetterToIndex(DEFAULT_COL_MAP.social),
+                chinese: columnLetterToIndex(DEFAULT_COL_MAP.chinese),
+                thai: columnLetterToIndex(DEFAULT_COL_MAP.thai),
+                technology: columnLetterToIndex(DEFAULT_COL_MAP.technology)
+            };
+
+            const dataStartIndex = cfg.startRow - 1; // Convert 1-based row to 0-based array index
+
+            for (let i = dataStartIndex; i < jsonData.length; i++) {
                 const row = jsonData[i];
-                const excelRowNumber = i + 1; // Human-readable row number (starts at 2)
+                const excelRowNumber = i + 1; // Human-readable row number
 
                 // Check if row is empty (no data)
                 if (!row || row.every(cell => !cell || String(cell).trim() === '')) {
@@ -329,13 +480,13 @@ document.getElementById('excel-file').addEventListener('change', (event) => {
                     break; // Stop uploading if row is empty
                 }
 
-                const thID = String(row[0] || '').trim();
-                const studentID = String(row[1] || '').trim();
-                const prefix = row[6] || '';
-                const name = row[7] || '';
-                const surname = row[8] || '';
-                const studyPlan = row[9] || '';
-                const normalizedStudyPlan = studyPlan.trim();
+                const thID = String(row[cfg.thID] || '').trim();
+                const studentID = String(row[cfg.studentID] || '').trim();
+                const prefix = row[cfg.prefix] || '';
+                const name = row[cfg.name] || '';
+                const surname = row[cfg.surname] || '';
+                const studyPlan = row[cfg.studyPlan] || '';
+                const normalizedStudyPlan = studyPlan.toString().trim();
 
                 let scores = {};
                 let totalScore = 0;
@@ -364,26 +515,26 @@ document.getElementById('excel-file').addEventListener('change', (event) => {
                     statusDiv.style.color = 'red';
                     console.warn(`Unrecognized study plan at row ${excelRowNumber}: ${normalizedStudyPlan}`);
                 } else {
-                    // Process scores for valid rows
+                    // Process scores using dynamic column mapping
                     if (normalizedStudyPlan === 'ISMT') {
                         scores = {
-                            math: Number(row[10]) || 0,
-                            science: Number(row[11]) || 0,
-                            english: Number(row[12]) || 0
+                            math: Number(row[cfg.math]) || 0,
+                            science: Number(row[cfg.science]) || 0,
+                            english: Number(row[cfg.english]) || 0
                         };
                     } else if (normalizedStudyPlan === 'ILEC') {
                         scores = {
-                            social: Number(row[13]) || 0,
-                            chinese: Number(row[14]) || 0,
-                            thai: Number(row[15]) || 0,
-                            english: Number(row[12]) || 0
+                            social: Number(row[cfg.social]) || 0,
+                            chinese: Number(row[cfg.chinese]) || 0,
+                            thai: Number(row[cfg.thai]) || 0,
+                            english: Number(row[cfg.english]) || 0
                         };
                     } else if (normalizedStudyPlan === 'IDGT') {
                         scores = {
-                            math: Number(row[10]) || 0,
-                            science: Number(row[11]) || 0,
-                            english: Number(row[12]) || 0,
-                            technology: Number(row[16]) || 0
+                            math: Number(row[cfg.math]) || 0,
+                            science: Number(row[cfg.science]) || 0,
+                            english: Number(row[cfg.english]) || 0,
+                            technology: Number(row[cfg.technology]) || 0
                         };
                     }
                     totalScore = calculateTotalScore(normalizedStudyPlan, scores);
