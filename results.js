@@ -14,31 +14,69 @@ const studentInfoDiv = document.getElementById('student-info');
 const errorMessageDiv = document.getElementById('error-message');
 const planStatsDiv = document.getElementById('plan-stats-student');
 
-const SUBJECTS = {
-    math: { label: 'คณิตศาสตร์', fullMark: 40 },
-    science: { label: 'วิทยาศาสตร์', fullMark: 60 },
-    english: { label: 'ภาษาอังกฤษ', fullMark: 50 },
-    social: { label: 'สังคมศึกษา', fullMark: 60 },
-    chinese: { label: 'ภาษาจีน', fullMark: 40 },
-    thai: { label: 'ภาษาไทย', fullMark: 60 },
-    technology: { label: 'เทคโนโลยี', fullMark: 80 }
+// ============= Default Plan Config fallback =============
+const DEFAULT_PLAN_CONFIG = {
+    ISMT: {
+        label: 'โครงการห้องเรียนพิเศษวิทยาศาสตร์ คณิตศาสตร์และเทคโนโลยี (ISMT)',
+        subjects: [
+            { key: 'math', label: 'คณิตศาสตร์', fullMark: 40 },
+            { key: 'science', label: 'วิทยาศาสตร์', fullMark: 60 },
+            { key: 'english', label: 'ภาษาอังกฤษ', fullMark: 50 }
+        ]
+    },
+    ILEC: {
+        label: 'โครงการห้องเรียนพิเศษภาษาต่างประเทศ (อังกฤษ-จีน) (ILEC)',
+        subjects: [
+            { key: 'social', label: 'สังคมศึกษา', fullMark: 60 },
+            { key: 'chinese', label: 'ภาษาจีน', fullMark: 40 },
+            { key: 'thai', label: 'ภาษาไทย', fullMark: 60 },
+            { key: 'english', label: 'ภาษาอังกฤษ', fullMark: 50 }
+        ]
+    },
+    IDGT: {
+        label: 'โครงการห้องเรียนพิเศษเทคโนโลยีดิจิทัล (IDGT)',
+        subjects: [
+            { key: 'science', label: 'วิทยาศาสตร์', fullMark: 60 },
+            { key: 'english', label: 'ภาษาอังกฤษ', fullMark: 50 },
+            { key: 'technology', label: 'เทคโนโลยี', fullMark: 80 }
+        ]
+    }
 };
 
-const PLAN_SUBJECTS = {
-    ISMT: ['math', 'science', 'english'],
-    ILEC: ['social', 'chinese', 'thai', 'english'],
-    IDGT: ['math', 'science', 'english', 'technology']
-};
+// Runtime config — loaded from Firestore
+let planConfig = JSON.parse(JSON.stringify(DEFAULT_PLAN_CONFIG));
 
-const PLAN_LABELS = {
-    ISMT: 'โครงการห้องเรียนพิเศษวิทยาศาสตร์ คณิตศาสตร์และเทคโนโลยี (ISMT)',
-    ILEC: 'โครงการห้องเรียนพิเศษภาษาต่างประเทศ (อังกฤษ-จีน) (ILEC)',
-    IDGT: 'โครงการห้องเรียนพิเศษเทคโนโลยีดิจิทัล (IDGT)'
-};
+async function loadPlanConfig() {
+    try {
+        const snap = await getDoc(doc(db, 'config', 'planConfig'));
+        if (snap.exists()) {
+            const data = snap.data();
+            const merged = {};
+            Object.keys(data).forEach(planKey => {
+                const plan = data[planKey];
+                if (plan && Array.isArray(plan.subjects)) {
+                    merged[planKey] = {
+                        label: plan.label || planKey,
+                        subjects: plan.subjects.map(s => ({
+                            key: String(s.key || '').trim(),
+                            label: String(s.label || s.key || '').trim(),
+                            fullMark: Number(s.fullMark) || 0
+                        })).filter(s => s.key)
+                    };
+                }
+            });
+            if (Object.keys(merged).length > 0) planConfig = merged;
+        }
+    } catch (e) {
+        console.error('loadPlanConfig error:', e);
+    }
+}
+
+function getPlanLabel(planKey) { return planConfig[planKey]?.label || planKey; }
+function getPlanSubjects(planKey) { return planConfig[planKey]?.subjects || []; }
 
 function normalizeStudyPlan(plan) {
-    const normalized = String(plan || '').trim();
-    return normalized;
+    return String(plan || '').trim();
 }
 
 function toNumber(value) {
@@ -53,11 +91,16 @@ function formatNumber(value, digits = 2) {
     return digits === 0 ? String(Math.round(n)) : n.toFixed(digits);
 }
 
+function calculateTotalScore(studyPlan, scores) {
+    const s = scores || {};
+    return getPlanSubjects(studyPlan).reduce((sum, subj) => sum + (Number(s[subj.key]) || 0), 0);
+}
+
 async function renderStudentPlanStats(studentPlan) {
     if (!planStatsDiv) return;
     const planKey = normalizeStudyPlan(studentPlan);
-    const subjectKeys = PLAN_SUBJECTS[planKey];
-    if (!subjectKeys) {
+    const subjectDefs = getPlanSubjects(planKey);
+    if (!subjectDefs.length) {
         planStatsDiv.innerHTML = '<p class="text-gray-500">ไม่พบแผนการเรียนสำหรับคำนวณสถิติ</p>';
         return;
     }
@@ -74,14 +117,15 @@ async function renderStudentPlanStats(studentPlan) {
         const count = Number(statsData.count || 0);
         const subjects = statsData.subjects || {};
 
-        const rowsHtml = subjectKeys.map((k) => {
-            const subject = SUBJECTS[k];
-            const fullMark = subject?.fullMark;
-            const max = subjects?.[k]?.max;
-            const avg = subjects?.[k]?.avg;
+        const rowsHtml = subjectDefs.map((subj) => {
+            // Use fullMark from Firestore stats if available (reflects latest config at publish time)
+            // Fall back to current planConfig fullMark
+            const fullMark = subjects?.[subj.key]?.fullMark ?? subj.fullMark;
+            const max = subjects?.[subj.key]?.max;
+            const avg = subjects?.[subj.key]?.avg;
             return `
                 <tr class="border-b border-gray-100">
-                    <td class="p-4 text-gray-700">${subject?.label || k}</td>
+                    <td class="p-4 text-gray-700">${subj.label}</td>
                     <td class="p-4 text-center text-gray-700">${formatNumber(fullMark, 0)}</td>
                     <td class="p-4 text-center text-gray-700">${max === undefined ? '-' : formatNumber(max, 0)}</td>
                     <td class="p-4 text-center text-gray-700">${avg === undefined ? '-' : formatNumber(avg, 2)}</td>
@@ -92,7 +136,7 @@ async function renderStudentPlanStats(studentPlan) {
         planStatsDiv.innerHTML = `
             <div class="border border-gray-100 rounded-xl overflow-hidden">
                 <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-4 bg-blue-50">
-                    <div class="font-bold text-primary">${PLAN_LABELS[planKey] || planKey}</div>
+                    <div class="font-bold text-primary">${getPlanLabel(planKey)}</div>
                     <div class="text-sm text-gray-700">จำนวนผู้เข้าสอบในแผนนี้: <span class="font-semibold">${count}</span></div>
                 </div>
                 <div class="overflow-x-auto">
@@ -119,14 +163,16 @@ async function renderStudentPlanStats(studentPlan) {
 }
 
 async function loadStudentData() {
-    // Show loading message
     studentInfoDiv.innerHTML = '<p style="color: blue;">กำลังโหลดข้อมูล...</p>';
     if (planStatsDiv) {
         planStatsDiv.innerHTML = '<p style="color: blue;">กำลังโหลดสถิติ...</p>';
     }
 
+    // Load plan config first
+    await loadPlanConfig();
+
     try {
-        if (!thID) {
+        if (!thID && !studentID) {
             studentInfoDiv.innerHTML = '';
             if (planStatsDiv) planStatsDiv.innerHTML = '';
             errorMessageDiv.textContent = 'ข้อมูลการเข้าสู่ระบบไม่ครบถ้วน';
@@ -134,7 +180,8 @@ async function loadStudentData() {
         }
 
         const studentsRef = collection(db, "students");
-        const constraints = [where('thID', '==', thID)];
+        const constraints = [];
+        if (thID) constraints.push(where('thID', '==', thID));
         if (studentID) constraints.push(where('studentID', '==', studentID));
         constraints.push(limit(1));
 
@@ -146,13 +193,13 @@ async function loadStudentData() {
             displayStudentData(studentData);
             await renderStudentPlanStats(studentData.studyPlan);
         } else {
-            studentInfoDiv.innerHTML = ''; // Clear loading message
+            studentInfoDiv.innerHTML = '';
             if (planStatsDiv) planStatsDiv.innerHTML = '';
             errorMessageDiv.textContent = "ไม่พบข้อมูลนักเรียน";
         }
     } catch (error) {
         console.error("Error fetching student data:", error);
-        studentInfoDiv.innerHTML = ''; // Clear loading message
+        studentInfoDiv.innerHTML = '';
         if (planStatsDiv) planStatsDiv.innerHTML = '';
         errorMessageDiv.textContent = "เกิดข้อผิดพลาดในการโหลดข้อมูล";
     }
@@ -160,42 +207,31 @@ async function loadStudentData() {
 
 function displayStudentData(data) {
     const fullName = `${data.prefix} ${data.name} ${data.surname || ''}`.trim();
-    let scoresHtml = '';
     const normalizedPlan = normalizeStudyPlan(data.studyPlan);
-    
-    if (normalizedPlan === 'ISMT') {
-        scoresHtml = `
-            <tr><td>คณิตศาสตร์</td><td>${data.scores.math || '-'}</td></tr>
-            <tr><td>วิทยาศาสตร์</td><td>${data.scores.science || '-'}</td></tr>
-            <tr><td>ภาษาอังกฤษ</td><td>${data.scores.english || '-'}</td></tr>
-        `;
-    } else if (normalizedPlan === 'ILEC') {
-        scoresHtml = `
-            <tr><td>สังคมศึกษา</td><td>${data.scores.social || '-'}</td></tr>
-            <tr><td>ภาษาจีน</td><td>${data.scores.chinese || '-'}</td></tr>
-            <tr><td>ภาษาไทย</td><td>${data.scores.thai || '-'}</td></tr>
-            <tr><td>ภาษาอังกฤษ</td><td>${data.scores.english || '-'}</td></tr>
-        `;
-    } else if (normalizedPlan === 'IDGT') {
-        scoresHtml = `
-            <tr><td>คณิตศาสตร์</td><td>${data.scores.math || '-'}</td></tr>
-            <tr><td>วิทยาศาสตร์</td><td>${data.scores.science || '-'}</td></tr>
-            <tr><td>ภาษาอังกฤษ</td><td>${data.scores.english || '-'}</td></tr>
-            <tr><td>เทคโนโลยี</td><td>${data.scores.technology || '-'}</td></tr>
-        `;
-    }
+    const subjectDefs = getPlanSubjects(normalizedPlan);
+    const total = calculateTotalScore(normalizedPlan, data.scores || {});
+
+    const scoresHtml = subjectDefs.map(subj => {
+        const val = data.scores?.[subj.key];
+        const display = (val !== null && val !== undefined) ? val : '-';
+        return `<tr><td>${subj.label}</td><td>${display} / ${subj.fullMark}</td></tr>`;
+    }).join('');
 
     studentInfoDiv.innerHTML = `
-        <p><strong>รหัสบัตรประชาชน:</strong> ${thID}</p>
-        <p><strong>เลขประจำตัวผู้เข้าสอบ:</strong> ${studentID}</p>
+        <p><strong>รหัสบัตรประชาชน:</strong> ${data.thID || '-'}</p>
+        <p><strong>เลขประจำตัวผู้เข้าสอบ:</strong> ${data.studentID || '-'}</p>
         <p><strong>ชื่อ-นามสกุล:</strong> ${fullName}</p>
-        <p><strong>แผนการเรียน:</strong> ${PLAN_LABELS[normalizedPlan] || normalizedPlan}</p>
+        <p><strong>แผนการเรียน:</strong> ${getPlanLabel(normalizedPlan)}</p>
         <table>
             <thead>
-                <tr><th>วิชา</th><th>คะแนน</th></tr>
+                <tr><th>วิชา</th><th>คะแนน / เต็ม</th></tr>
             </thead>
             <tbody>
                 ${scoresHtml}
+                <tr style="font-weight:bold; border-top: 2px solid #ccc;">
+                    <td>รวม</td>
+                    <td>${total}</td>
+                </tr>
             </tbody>
         </table>
     `;
@@ -209,7 +245,6 @@ function logout() {
     }
 }
 
-// Add logout event listener
 document.getElementById('logout-btn').addEventListener('click', logout);
 
 // Load data when page loads

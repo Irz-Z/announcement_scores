@@ -41,18 +41,19 @@ function fillForm(data) {
     form.name.value = data.name || "";
     form.surname.value = data.surname || "";
     form.studentID.value = data.studentID || "";
-    form.study_plan.value = data.study_plan || "";
+    form.study_plan.value = data.studyPlan || "";
 
     // แสดงคะแนนตามแผนการเรียน
-    showSections(data.study_plan);
+    showSections(data.studyPlan);
 
-    form.math.value = data.math || "";
-    form.science.value = data.science || "";
-    form.english.value = data.english || "";
-    form.chinese.value = data.chinese || "";
-    form.social.value = data.social || "";
-    form.thai.value = data.thai || "";
-    form.technology.value = data.technology || "";
+    const scores = data.scores || {};
+    form.math.value = scores.math ?? "";
+    form.science.value = scores.science ?? "";
+    form.english.value = scores.english ?? "";
+    form.chinese.value = scores.chinese ?? "";
+    form.social.value = scores.social ?? "";
+    form.thai.value = scores.thai ?? "";
+    form.technology.value = scores.technology ?? "";
 }
 
 // บันทึกการแก้ไขข้อมูล
@@ -63,26 +64,44 @@ editForm.addEventListener("submit", async (event) => {
     const studentId = urlParams.get("id");
 
     const form = event.target;
+    const studyPlan = form.study_plan.value || "";
+
+    // สร้าง scores object ตามแผนการเรียน
+    let scores = {};
+    if (studyPlan === "ISMT") {
+        scores = {
+            math: form.math.value ? parseFloat(form.math.value) : 0,
+            science: form.science.value ? parseFloat(form.science.value) : 0,
+            english: form.english.value ? parseFloat(form.english.value) : 0,
+        };
+    } else if (studyPlan === "ILEC") {
+        scores = {
+            social: form.social.value ? parseFloat(form.social.value) : 0,
+            chinese: form.chinese.value ? parseFloat(form.chinese.value) : 0,
+            thai: form.thai.value ? parseFloat(form.thai.value) : 0,
+            english: form.english.value ? parseFloat(form.english.value) : 0,
+        };
+        if (scores.english > 60) {
+            alert("คะแนนภาษาอังกฤษสำหรับแผนการเรียนต่างประเทศต้องไม่เกิน 60");
+            return;
+        }
+    } else if (studyPlan === "IDGT") {
+        scores = {
+            science: form.science.value ? parseFloat(form.science.value) : 0,
+            english: form.english.value ? parseFloat(form.english.value) : 0,
+            technology: form.technology.value ? parseFloat(form.technology.value) : 0,
+        };
+    }
+
     const updatedData = {
         thID: form.thID.value || "",
         prefix: form.prefix.value || "",
         name: form.name.value || "",
         surname: form.surname.value || "",
         studentID: form.studentID.value || "",
-        study_plan: form.study_plan.value || "",
-        math: form.math.value ? parseFloat(form.math.value) : null,
-        science: form.science.value ? parseFloat(form.science.value) : null,
-        english: form.english.value ? parseFloat(form.english.value) : null,
-        chinese: form.chinese.value ? parseFloat(form.chinese.value) : null,
-        social: form.social.value ? parseFloat(form.social.value) : null,
-        thai: form.thai.value ? parseFloat(form.thai.value) : null,
-        technology: form.technology.value ? parseFloat(form.technology.value) : null,
+        studyPlan: studyPlan,
+        scores: scores,
     };
-
-    if (updatedData.study_plan === "ILEC" && updatedData.english > 60) {
-        alert("คะแนนภาษาอังกฤษสำหรับแผนการเรียนต่างประเทศต้องไม่เกิน 60");
-        return;
-    }
 
     try {
         await updateDoc(doc(db, "students", studentId), updatedData);
@@ -106,7 +125,7 @@ function showSections(plan) {
     } else if (plan === "ILEC") {
         toggleSections(["chinese-section", "social-section", "thai-section", "english-section"]);
     } else if (plan === "IDGT") {
-        toggleSections(["math-section", "science-section", "english-section", "technology-section"]);
+        toggleSections(["science-section", "english-section", "technology-section"]);
     }
 }
 

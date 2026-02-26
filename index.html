@@ -1,50 +1,56 @@
 <!DOCTYPE html>
 <html lang="th">
+
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>เข้าสู่ระบบ</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-      tailwind.config = {
-        theme: {
-          extend: {
-            fontFamily: {
-              sans: ['Sarabun', 'sans-serif'],
-            },
-            colors: {
-              primary: '#1E88E5', // Blue (Main Theme)
-              secondary: '#E91E63', // Pink (Interaction/Accent)
-            }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>เข้าสู่ระบบ</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Sarabun', 'sans-serif'],
+          },
+          colors: {
+            primary: '#1E88E5',
+            secondary: '#E91E63',
           }
         }
       }
-    </script>
-    <script type="module" src="login.js"></script>
+    }
+  </script>
+  <script type="module" src="login.js"></script>
 </head>
+
 <body class="bg-blue-50 min-h-screen flex flex-col font-sans">
-    <header class="bg-primary text-white p-6 shadow-md text-center border-b-4 border-secondary">
-        <h2 class="text-xl font-bold leading-relaxed drop-shadow-md">ตรวจสอบคะแนนการสอบเข้าต่อระดับชั้นมัธยมศึกษาปีที่ 4 ปีการศึกษา 2569 รอบวัดความรู้ทั่วไป<br/>โรงเรียนเตรียมอุดมศึกษาน้อมเกล้า นครราชสีมา</h2>
-    </header>
-    <div class="w-11/12 max-w-3xl mx-auto my-12 p-10 bg-white rounded-xl shadow-lg border-t-4 border-primary">
-        <section class="login">
-            <form id="login-form" method="POST">
-                <label class="block mb-2 font-medium text-gray-700">รหัสบัตรประชาชน</label>
-                <input type="text" name="thID" placeholder="เช่น 1112415655151" required maxlength="13" pattern="\d{13}" 
-                       class="w-full p-3 mb-6 border border-gray-300 rounded-lg text-base focus:outline-none focus:border-secondary focus:ring-2 focus:ring-secondary transition duration-200">
-                <div id="thID-error" class="text-red-600 text-sm -mt-4 mb-4 hidden">กรุณากรอกรหัสบัตรประชาชน 13 หลัก</div>
+  <header class="bg-primary text-white p-6 shadow-md text-center border-b-4 border-secondary">
+    <h2 class="text-xl font-bold leading-relaxed drop-shadow-md">ตรวจสอบคะแนนการสอบเข้าต่อระดับชั้นมัธยมศึกษาปีที่ 4
+      ปีการศึกษา 2569 รอบวัดระดับความรู้ทางวิชาการ<br />โรงเรียนเตรียมอุดมศึกษาน้อมเกล้า นครราชสีมา</h2>
+  </header>
+  <div class="w-11/12 max-w-3xl mx-auto my-12 p-10 bg-white rounded-xl shadow-lg border-t-4 border-primary">
+    <section class="login">
+      <form id="login-form" method="POST">
+        <label id="login-field-label" class="block mb-2 font-medium text-gray-700">รหัสบัตรประชาชน</label>
+        <input type="text" id="login-field-input" name="loginField" placeholder="เช่น 1112415655151" required
+          maxlength="13" pattern="\d{13}" data-mode="thID"
+          class="w-full p-3 mb-6 border border-gray-300 rounded-lg text-base focus:outline-none focus:border-secondary focus:ring-2 focus:ring-secondary transition duration-200">
+        <div id="login-field-error" class="text-red-600 text-sm -mt-4 mb-4 hidden">กรุณากรอกรหัสบัตรประชาชน 13 หลัก
+        </div>
 
-                <input type="submit" value="เข้าสู่ระบบ" 
-                       class="w-full p-3 border-none rounded-lg bg-secondary text-white text-base font-semibold cursor-pointer hover:bg-pink-700 transform hover:-translate-y-0.5 transition duration-200 shadow-md">
-            </form>
-        </section>
-    </div>
+        <input type="submit" value="เข้าสู่ระบบ"
+          class="w-full p-3 border-none rounded-lg bg-secondary text-white text-base font-semibold cursor-pointer hover:bg-pink-700 transform hover:-translate-y-0.5 transition duration-200 shadow-md">
+      </form>
+    </section>
+  </div>
 
-    <footer class="text-center p-5 text-sm text-gray-500 mt-auto">
-        <p>© 2026 Triamudom suksanomklao Nokronratchsima Powered by Intensive Digital Technology : IDGT</p>
-    </footer>
+  <footer class="text-center p-5 text-sm text-gray-500 mt-auto">
+    <p>© 2026 Triamudom suksanomklao Nokronratchsima Powered by Intensive Digital Technology : IDGT</p>
+  </footer>
 </body>
+
 </html>
