@@ -68,7 +68,8 @@ async function loadPlanConfig() {
                         subjects: plan.subjects.map(s => ({
                             key: String(s.key || '').trim(),
                             label: String(s.label || s.key || '').trim(),
-                            fullMark: Number(s.fullMark) || 0
+                            fullMark: Number(s.fullMark) || 0,
+                            fullMarkStat: s.fullMarkStat !== undefined ? Number(s.fullMarkStat) : Number(s.fullMark) || 0
                         })).filter(s => s.key)
                     };
                 }
@@ -166,7 +167,9 @@ async function renderStudentPlanStats(studentPlan) {
         const subjects = statsData.subjects || {};
 
         const rowsHtml = subjectDefs.map((subj) => {
-            const fullMark = subjects?.[subj.key]?.fullMark ?? subj.fullMark;
+            // fullMarkStat: shown in the "เต็ม" stats column
+            // fullMark: used as the denominator for score display (subjects[subj.key].fullMark may be stale; prefer subj.fullMark from planConfig)
+            const fullMarkStat = subjects?.[subj.key]?.fullMarkStat ?? subjects?.[subj.key]?.fullMark ?? subj.fullMarkStat ?? subj.fullMark;
             const max = subjects?.[subj.key]?.max;
             const min = subjects?.[subj.key]?.min;
             const avg = subjects?.[subj.key]?.avg;
@@ -174,7 +177,7 @@ async function renderStudentPlanStats(studentPlan) {
             return `
                 <tr class="border-b border-gray-100">
                     <td class="p-4 text-gray-700">${subj.label}</td>
-                    <td class="p-4 text-center text-gray-700">${formatNumber(fullMark, 0)}</td>
+                    <td class="p-4 text-center text-gray-700">${formatNumber(fullMarkStat, 0)}</td>
                     <td class="p-4 text-center text-blue-700 font-semibold">${max === undefined || max === null ? '-' : formatNumber(max, 2)}</td>
                     <td class="p-4 text-center text-red-600 font-semibold">${min === undefined || min === null ? '-' : formatNumber(min, 2)}</td>
                     <td class="p-4 text-center text-gray-700">${avg === undefined || avg === null ? '-' : formatNumber(avg, 2)}</td>

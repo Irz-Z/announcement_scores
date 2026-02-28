@@ -5,26 +5,26 @@ const DEFAULT_PLAN_CONFIG = {
     ISMT: {
         label: 'โครงการห้องเรียนพิเศษวิทยาศาสตร์ คณิตศาสตร์และเทคโนโลยี (ISMT)',
         subjects: [
-            { key: 'math', label: 'คณิตศาสตร์', fullMark: 40 },
-            { key: 'science', label: 'วิทยาศาสตร์', fullMark: 60 },
-            { key: 'english', label: 'ภาษาอังกฤษ', fullMark: 50 }
+            { key: 'math', label: 'คณิตศาสตร์', fullMark: 40, fullMarkStat: 40 },
+            { key: 'science', label: 'วิทยาศาสตร์', fullMark: 60, fullMarkStat: 60 },
+            { key: 'english', label: 'ภาษาอังกฤษ', fullMark: 50, fullMarkStat: 50 }
         ]
     },
     ILEC: {
         label: 'โครงการห้องเรียนพิเศษภาษาต่างประเทศ (อังกฤษ-จีน) (ILEC)',
         subjects: [
-            { key: 'social', label: 'สังคมศึกษา', fullMark: 60 },
-            { key: 'chinese', label: 'ภาษาจีน', fullMark: 40 },
-            { key: 'thai', label: 'ภาษาไทย', fullMark: 60 },
-            { key: 'english', label: 'ภาษาอังกฤษ', fullMark: 50 }
+            { key: 'social', label: 'สังคมศึกษา', fullMark: 60, fullMarkStat: 60 },
+            { key: 'chinese', label: 'ภาษาจีน', fullMark: 40, fullMarkStat: 40 },
+            { key: 'thai', label: 'ภาษาไทย', fullMark: 60, fullMarkStat: 60 },
+            { key: 'english', label: 'ภาษาอังกฤษ', fullMark: 50, fullMarkStat: 50 }
         ]
     },
     IDGT: {
         label: 'โครงการห้องเรียนพิเศษเทคโนโลยีดิจิทัล (IDGT)',
         subjects: [
-            { key: 'science', label: 'วิทยาศาสตร์', fullMark: 60 },
-            { key: 'english', label: 'ภาษาอังกฤษ', fullMark: 50 },
-            { key: 'technology', label: 'เทคโนโลยี', fullMark: 80 }
+            { key: 'science', label: 'วิทยาศาสตร์', fullMark: 60, fullMarkStat: 60 },
+            { key: 'english', label: 'ภาษาอังกฤษ', fullMark: 50, fullMarkStat: 50 },
+            { key: 'technology', label: 'เทคโนโลยี', fullMark: 80, fullMarkStat: 80 }
         ]
     }
 };
@@ -347,10 +347,12 @@ function _renderStudyPlanStatsWithOverrides(students, customOverrides, container
             const displayMin = customMin !== undefined && customMin !== null && customMin !== '' ? customMin : (calcMin === null ? '' : formatNumber(calcMin, 2));
             const displayAvg = customAvg !== undefined && customAvg !== null && customAvg !== '' ? customAvg : (calcAvg === null ? '' : formatNumber(calcAvg, 2));
 
+            const fmStatDisplay = subj.fullMarkStat !== undefined ? subj.fullMarkStat : subj.fullMark;
             return `
                 <tr class="border-b border-gray-100" data-plan="${planKey}" data-subj="${subj.key}">
                     <td class="py-2 pr-2 text-gray-700">${subj.label}</td>
-                    <td class="py-2 px-2 text-center text-gray-700">${formatNumber(subj.fullMark, 0)}</td>
+                    <td class="py-2 px-2 text-center text-gray-500 text-xs font-mono">${formatNumber(subj.fullMark, 0)}</td>
+                    <td class="py-2 px-2 text-center text-gray-700">${formatNumber(fmStatDisplay, 0)}</td>
                     <td class="py-2 px-2 text-center">
                         <input type="number" step="0.01" class="stat-override-max w-16 px-1 py-1 text-center text-sm border border-gray-200 rounded focus:ring-1 focus:ring-primary ${customMax !== undefined && customMax !== '' ? 'bg-yellow-50 text-yellow-700 font-bold border-yellow-300' : 'text-gray-700'}" value="${displayMax}" placeholder="คำนวณ">
                     </td>
@@ -378,7 +380,8 @@ function _renderStudyPlanStatsWithOverrides(students, customOverrides, container
                         <thead>
                             <tr class="bg-blue-50 text-gray-700 text-xs uppercase">
                                 <th class="py-2 px-3 text-left font-bold">วิชา</th>
-                                <th class="py-2 px-3 text-center font-bold">เต็ม</th>
+                                <th class="py-2 px-3 text-center font-bold text-gray-400" title="คะแนนเต็มแบบหารแล้ว">เต็ม (หาร)</th>
+                                <th class="py-2 px-3 text-center font-bold">เต็ม (สถิติ)</th>
                                 <th class="py-2 px-3 text-center font-bold">สูงสุด</th>
                                 <th class="py-2 px-3 text-center font-bold">ต่ำสุด</th>
                                 <th class="py-2 px-3 text-center font-bold">เฉลี่ย</th>
@@ -468,6 +471,7 @@ async function publishStudyPlanStats(statsByPlan, customOverrides = {}) {
             subjects[subj.key] = {
                 label: subj.label,
                 fullMark: subj.fullMark,
+                fullMarkStat: subj.fullMarkStat !== undefined ? subj.fullMarkStat : subj.fullMark,
                 max: finalMax === null ? null : Number(finalMax),
                 min: finalMin === null ? null : Number(finalMin),
                 avg: finalAvg === null ? null : Number(finalAvg)
@@ -505,7 +509,8 @@ async function loadPlanConfig() {
                         subjects: plan.subjects.map(s => ({
                             key: String(s.key || '').trim(),
                             label: String(s.label || s.key || '').trim(),
-                            fullMark: Number(s.fullMark) || 0
+                            fullMark: Number(s.fullMark) || 0,
+                            fullMarkStat: s.fullMarkStat !== undefined ? Number(s.fullMarkStat) : Number(s.fullMark) || 0
                         })).filter(s => s.key)
                     };
                 }
@@ -532,7 +537,8 @@ async function savePlanConfig() {
                 subjects: getPlanSubjects(planKey).map(s => ({
                     key: s.key,
                     label: s.label,
-                    fullMark: s.fullMark
+                    fullMark: s.fullMark,
+                    fullMarkStat: s.fullMarkStat !== undefined ? s.fullMarkStat : s.fullMark
                 }))
             };
         });
@@ -593,7 +599,9 @@ function renderPlanPanel(planKey) {
     const plan = planConfig[planKey];
     const subjects = plan?.subjects || [];
 
-    const rows = subjects.map((s, i) => `
+    const rows = subjects.map((s, i) => {
+        const fmStat = s.fullMarkStat !== undefined ? s.fullMarkStat : s.fullMark;
+        return `
         <tr class="border-b border-orange-100" data-idx="${i}">
             <td class="py-2 pl-2 pr-1">
                 <input type="text" class="subj-label-input w-full px-2 py-1 border border-orange-200 rounded text-sm bg-orange-50 focus:outline-none focus:ring-1 focus:ring-orange-400"
@@ -605,13 +613,18 @@ function renderPlanPanel(planKey) {
             </td>
             <td class="py-2 px-1">
                 <input type="number" class="subj-fm-input w-20 px-2 py-1 border border-orange-200 rounded text-sm bg-orange-50 text-center font-bold focus:outline-none focus:ring-1 focus:ring-orange-400"
-                    value="${s.fullMark}" min="1" max="9999" data-idx="${i}">
+                    value="${s.fullMark}" min="1" max="9999" data-idx="${i}" title="คะแนนเต็มแบบหารแล้ว (ใช้คำนวณร้อยละ)">
+            </td>
+            <td class="py-2 px-1">
+                <input type="number" class="subj-fmstat-input w-20 px-2 py-1 border border-purple-200 rounded text-sm bg-purple-50 text-center font-bold focus:outline-none focus:ring-1 focus:ring-purple-400"
+                    value="${fmStat}" min="1" max="9999" data-idx="${i}" title="คะแนนเต็มในสถิติ (แสดงในตารางสถิติ)">
             </td>
             <td class="py-2 pl-1">
                 <button class="subj-delete-btn text-red-400 hover:text-red-600 px-2 py-1 rounded hover:bg-red-50 text-xs font-bold transition" data-idx="${i}">✕ ลบ</button>
             </td>
         </tr>
-    `).join('');
+    `;
+    }).join('');
 
     return `
         <div class="overflow-x-auto">
@@ -620,7 +633,8 @@ function renderPlanPanel(planKey) {
                     <tr class="text-xs text-gray-500 uppercase bg-orange-50">
                         <th class="py-2 pl-2 pr-1 text-left font-semibold">ชื่อวิชา</th>
                         <th class="py-2 px-1 text-left font-semibold">Key (ภาษาอังกฤษ)</th>
-                        <th class="py-2 px-1 text-center font-semibold">คะแนนเต็ม</th>
+                        <th class="py-2 px-1 text-center font-semibold text-orange-700" title="ใช้เป็นตัวหาร เมื่อแสดงคะแนน/เต็ม บนหน้าผลคะแนน">เต็ม (หาร 💡)</th>
+                        <th class="py-2 px-1 text-center font-semibold text-purple-700" title="แสดงใน คอลัมน์ เต็ม ของตารางสถิติ">เต็ม (สถิติ 📊)</th>
                         <th class="py-2 pl-1"></th>
                     </tr>
                 </thead>
@@ -628,6 +642,10 @@ function renderPlanPanel(planKey) {
                     ${rows}
                 </tbody>
             </table>
+            <div class="flex items-center gap-4 mb-3">
+                <span class="text-xs text-orange-600 bg-orange-50 border border-orange-200 px-2 py-1 rounded">💡 เต็ม (หาร) = ตัวหารเมื่อแสดงคะแนน เช่น 45/60 หรือคำนวณร้อยละ</span>
+                <span class="text-xs text-purple-600 bg-purple-50 border border-purple-200 px-2 py-1 rounded">📊 เต็ม (สถิติ) = คะแนนเต็มที่แสดงในตารางสถิติ</span>
+            </div>
             <button id="add-subj-btn-${planKey}"
                 class="text-orange-600 hover:text-orange-800 text-sm font-medium px-3 py-1.5 border border-orange-300 rounded-lg hover:bg-orange-50 transition duration-150">
                 ➕ เพิ่มวิชา
@@ -647,7 +665,8 @@ function attachPlanPanelEvents(planKey) {
             const label = tr.querySelector('.subj-label-input')?.value.trim() || '';
             const key = tr.querySelector('.subj-key-input')?.value.trim().replace(/\s+/g, '_') || '';
             const fullMark = parseInt(tr.querySelector('.subj-fm-input')?.value) || 0;
-            if (key) subjects.push({ key, label, fullMark });
+            const fullMarkStat = parseInt(tr.querySelector('.subj-fmstat-input')?.value);
+            if (key) subjects.push({ key, label, fullMark, fullMarkStat: Number.isFinite(fullMarkStat) ? fullMarkStat : fullMark });
         });
         planConfig[planKey].subjects = subjects;
     };
@@ -666,7 +685,7 @@ function attachPlanPanelEvents(planKey) {
     // Add new subject
     document.getElementById(`add-subj-btn-${planKey}`)?.addEventListener('click', () => {
         syncInputs();
-        planConfig[planKey].subjects.push({ key: '', label: '', fullMark: 0 });
+        planConfig[planKey].subjects.push({ key: '', label: '', fullMark: 0, fullMarkStat: 0 });
         renderPlanConfigUI();
         // Focus the new label input
         const rows = panel.querySelectorAll('tr[data-idx]');
@@ -693,7 +712,8 @@ document.getElementById('save-plan-config-btn')?.addEventListener('click', () =>
             const label = tr.querySelector('.subj-label-input')?.value.trim() || '';
             const key = tr.querySelector('.subj-key-input')?.value.trim().replace(/\s+/g, '_') || '';
             const fullMark = parseInt(tr.querySelector('.subj-fm-input')?.value) || 0;
-            if (key) subjects.push({ key, label, fullMark });
+            const fullMarkStat = parseInt(tr.querySelector('.subj-fmstat-input')?.value);
+            if (key) subjects.push({ key, label, fullMark, fullMarkStat: Number.isFinite(fullMarkStat) ? fullMarkStat : fullMark });
         });
         planConfig[planKey].subjects = subjects;
     }
