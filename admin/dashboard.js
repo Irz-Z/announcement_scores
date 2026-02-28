@@ -48,7 +48,8 @@ const DEFAULT_COL_MAP = {
     prefix: 'G',
     name: 'H',
     surname: 'I',
-    studyPlan: 'J'
+    studyPlan: 'J',
+    avgScore: 'none'
 };
 
 const COL_FIELD_LABELS = {
@@ -57,7 +58,8 @@ const COL_FIELD_LABELS = {
     prefix: 'คำนำหน้า',
     name: 'ชื่อ',
     surname: 'นามสกุล',
-    studyPlan: 'แผนการเรียน'
+    studyPlan: 'แผนการเรียน',
+    avgScore: 'คะแนนเฉลี่ย'
 };
 
 let uploadConfig = null; // Will be set when modal confirms
@@ -170,7 +172,8 @@ function updateMappingPreview() {
         } else {
             display = `<strong>คอลัมน์ ${val}</strong>`;
         }
-        html += `<div>${COL_FIELD_LABELS[field]}: ${display}</div>`;
+        const label = COL_FIELD_LABELS[field] || field;
+        html += `<div>${label}: ${display}</div>`;
     });
 
     getAllSubjectColumns().forEach(subj => {
@@ -218,6 +221,7 @@ function getUploadConfigFromModal() {
             config[field] = columnLetterToIndex(val);
         }
     });
+    // avgScore is already handled as part of DEFAULT_COL_MAP above
 
     getAllSubjectColumns().forEach(subj => {
         const field = subj.key;
@@ -300,10 +304,11 @@ function _renderStudyPlanStatsWithOverrides(students, customOverrides, container
     const planKeys = getPlanKeys();
     const stats = {};
     planKeys.forEach((planKey) => {
-        stats[planKey] = { count: 0, sums: {}, maxs: {} };
+        stats[planKey] = { count: 0, sums: {}, maxs: {}, mins: {} };
         getPlanSubjects(planKey).forEach((subj) => {
             stats[planKey].sums[subj.key] = 0;
             stats[planKey].maxs[subj.key] = -Infinity;
+            stats[planKey].mins[subj.key] = Infinity;
         });
     });
 
@@ -315,6 +320,7 @@ function _renderStudyPlanStatsWithOverrides(students, customOverrides, container
             const scoreValue = toNumber(student.scores?.[subj.key]);
             stats[plan].sums[subj.key] += scoreValue;
             stats[plan].maxs[subj.key] = Math.max(stats[plan].maxs[subj.key], scoreValue);
+            stats[plan].mins[subj.key] = Math.min(stats[plan].mins[subj.key], scoreValue);
         });
     });
 
@@ -329,13 +335,16 @@ function _renderStudyPlanStatsWithOverrides(students, customOverrides, container
         const count = planStat.count;
         const rowsHtml = getPlanSubjects(planKey).map((subj) => {
             const calcMax = count > 0 ? planStat.maxs[subj.key] : null;
+            const calcMin = count > 0 ? planStat.mins[subj.key] : null;
             const calcAvg = count > 0 ? (planStat.sums[subj.key] / count) : null;
 
             // Apply override if exists, otherwise use calculated
             const customMax = overrides[subj.key]?.max;
+            const customMin = overrides[subj.key]?.min;
             const customAvg = overrides[subj.key]?.avg;
 
-            const displayMax = customMax !== undefined && customMax !== null && customMax !== '' ? customMax : (calcMax === null ? '' : formatNumber(calcMax, 0));
+            const displayMax = customMax !== undefined && customMax !== null && customMax !== '' ? customMax : (calcMax === null ? '' : formatNumber(calcMax, 2));
+            const displayMin = customMin !== undefined && customMin !== null && customMin !== '' ? customMin : (calcMin === null ? '' : formatNumber(calcMin, 2));
             const displayAvg = customAvg !== undefined && customAvg !== null && customAvg !== '' ? customAvg : (calcAvg === null ? '' : formatNumber(calcAvg, 2));
 
             return `
@@ -344,6 +353,9 @@ function _renderStudyPlanStatsWithOverrides(students, customOverrides, container
                     <td class="py-2 px-2 text-center text-gray-700">${formatNumber(subj.fullMark, 0)}</td>
                     <td class="py-2 px-2 text-center">
                         <input type="number" step="0.01" class="stat-override-max w-16 px-1 py-1 text-center text-sm border border-gray-200 rounded focus:ring-1 focus:ring-primary ${customMax !== undefined && customMax !== '' ? 'bg-yellow-50 text-yellow-700 font-bold border-yellow-300' : 'text-gray-700'}" value="${displayMax}" placeholder="คำนวณ">
+                    </td>
+                    <td class="py-2 px-2 text-center">
+                        <input type="number" step="0.01" class="stat-override-min w-16 px-1 py-1 text-center text-sm border border-gray-200 rounded focus:ring-1 focus:ring-primary ${customMin !== undefined && customMin !== '' ? 'bg-yellow-50 text-yellow-700 font-bold border-yellow-300' : 'text-gray-700'}" value="${displayMin}" placeholder="คำนวณ">
                     </td>
                     <td class="py-2 pl-2 text-center">
                         <input type="number" step="0.01" class="stat-override-avg w-16 px-1 py-1 text-center text-sm border border-gray-200 rounded focus:ring-1 focus:ring-primary ${customAvg !== undefined && customAvg !== '' ? 'bg-yellow-50 text-yellow-700 font-bold border-yellow-300' : 'text-gray-700'}" value="${displayAvg}" placeholder="คำนวณ">
@@ -368,6 +380,7 @@ function _renderStudyPlanStatsWithOverrides(students, customOverrides, container
                                 <th class="py-2 px-3 text-left font-bold">วิชา</th>
                                 <th class="py-2 px-3 text-center font-bold">เต็ม</th>
                                 <th class="py-2 px-3 text-center font-bold">สูงสุด</th>
+                                <th class="py-2 px-3 text-center font-bold">ต่ำสุด</th>
                                 <th class="py-2 px-3 text-center font-bold">เฉลี่ย</th>
                             </tr>
                         </thead>
@@ -395,11 +408,13 @@ function _renderStudyPlanStatsWithOverrides(students, customOverrides, container
             block.querySelectorAll('tr[data-subj]').forEach(tr => {
                 const subjKey = tr.dataset.subj;
                 const maxVal = tr.querySelector('.stat-override-max').value.trim();
+                const minVal = tr.querySelector('.stat-override-min').value.trim();
                 const avgVal = tr.querySelector('.stat-override-avg').value.trim();
 
-                if (maxVal !== '' || avgVal !== '') {
+                if (maxVal !== '' || minVal !== '' || avgVal !== '') {
                     newOverrides[subjKey] = {
                         max: maxVal !== '' ? Number(maxVal) : null,
+                        min: minVal !== '' ? Number(minVal) : null,
                         avg: avgVal !== '' ? Number(avgVal) : null
                     };
                 }
@@ -438,19 +453,23 @@ async function publishStudyPlanStats(statsByPlan, customOverrides = {}) {
         getPlanSubjects(planKey).forEach((subj) => {
             const sum = planStat.sums?.[subj.key] || 0;
             const calcMax = count > 0 ? planStat.maxs?.[subj.key] : null;
+            const calcMin = count > 0 ? planStat.mins?.[subj.key] : null;
             const calcAvg = count > 0 ? (sum / count) : null;
 
             // Use override if present, else fallback to calculated
             const customMax = overrides[subj.key]?.max;
+            const customMin = overrides[subj.key]?.min;
             const customAvg = overrides[subj.key]?.avg;
 
             const finalMax = customMax !== undefined && customMax !== null ? customMax : calcMax;
+            const finalMin = customMin !== undefined && customMin !== null ? customMin : calcMin;
             const finalAvg = customAvg !== undefined && customAvg !== null ? customAvg : calcAvg;
 
             subjects[subj.key] = {
                 label: subj.label,
                 fullMark: subj.fullMark,
                 max: finalMax === null ? null : Number(finalMax),
+                min: finalMin === null ? null : Number(finalMin),
                 avg: finalAvg === null ? null : Number(finalAvg)
             };
         });
@@ -745,6 +764,7 @@ onAuthStateChanged(auth, (user) => {
             loadStudents();
         });
         loadLoginMode();
+        loadDisplaySettings();
     } else {
         window.location.href = 'index.html';
     }
@@ -782,6 +802,80 @@ document.getElementById('save-login-mode-btn')?.addEventListener('click', async 
         updateLoginModeStatus(mode);
     } catch (e) {
         console.error('saveLoginMode error:', e);
+        statusEl.textContent = '❌ บันทึกไม่สำเร็จ';
+    }
+});
+
+// ============= Display Settings =============
+function updatePreOralThresholdVisibility() {
+    const oralMode = document.querySelector('input[name="oral-exam-mode"]:checked')?.value || 'no';
+    const row = document.getElementById('pre-oral-threshold-row');
+    if (!row) return;
+    if (oralMode === 'not_included') {
+        row.classList.remove('hidden');
+        row.classList.add('flex');
+    } else {
+        row.classList.add('hidden');
+        row.classList.remove('flex');
+    }
+}
+
+// Wire oral-exam-mode radios to toggle threshold row
+document.querySelectorAll('input[name="oral-exam-mode"]').forEach(radio => {
+    radio.addEventListener('change', updatePreOralThresholdVisibility);
+});
+
+async function loadDisplaySettings() {
+    try {
+        const snap = await getDoc(doc(db, 'config', 'displaySettings'));
+        if (snap.exists()) {
+            const data = snap.data();
+            const scoreMode = data.scoreMode || 'raw';
+            const oralMode = data.oralMode || 'no';
+            const scoreModeEl = document.querySelector(`input[name="score-display-mode"][value="${scoreMode}"]`);
+            if (scoreModeEl) scoreModeEl.checked = true;
+            const oralModeEl = document.querySelector(`input[name="oral-exam-mode"][value="${oralMode}"]`);
+            if (oralModeEl) oralModeEl.checked = true;
+            // Restore threshold
+            const thresholdEl = document.getElementById('pre-oral-threshold');
+            if (thresholdEl && data.preOralThreshold !== undefined && data.preOralThreshold !== null) {
+                thresholdEl.value = data.preOralThreshold;
+            }
+            const unitVal = data.preOralUnit || 'percent';
+            const unitEl = document.querySelector(`input[name="pre-oral-unit"][value="${unitVal}"]`);
+            if (unitEl) unitEl.checked = true;
+        } else {
+            // defaults
+            const rawEl = document.getElementById('score-mode-raw');
+            if (rawEl) rawEl.checked = true;
+            const oralNoEl = document.getElementById('oral-no');
+            if (oralNoEl) oralNoEl.checked = true;
+        }
+        updatePreOralThresholdVisibility();
+    } catch (e) {
+        console.error('loadDisplaySettings error:', e);
+    }
+}
+
+document.getElementById('save-display-settings-btn')?.addEventListener('click', async () => {
+    const scoreMode = document.querySelector('input[name="score-display-mode"]:checked')?.value || 'raw';
+    const oralMode = document.querySelector('input[name="oral-exam-mode"]:checked')?.value || 'no';
+    const preOralThresholdRaw = document.getElementById('pre-oral-threshold')?.value.trim();
+    const preOralThreshold = preOralThresholdRaw !== '' ? Number(preOralThresholdRaw) : null;
+    const preOralUnit = document.querySelector('input[name="pre-oral-unit"]:checked')?.value || 'percent';
+    const statusEl = document.getElementById('display-settings-status');
+    try {
+        statusEl.textContent = 'กำลังบันทึก...';
+        await setDoc(doc(db, 'config', 'displaySettings'), {
+            scoreMode,
+            oralMode,
+            preOralThreshold: preOralThreshold !== null ? preOralThreshold : null,
+            preOralUnit
+        }, { merge: true });
+        statusEl.textContent = '✅ บันทึกแล้ว';
+        setTimeout(() => { statusEl.textContent = ''; }, 3000);
+    } catch (e) {
+        console.error('saveDisplaySettings error:', e);
         statusEl.textContent = '❌ บันทึกไม่สำเร็จ';
     }
 });
@@ -968,6 +1062,7 @@ document.getElementById('excel-file').addEventListener('change', (event) => {
                 const normalizedStudyPlan = studyPlan.toString().trim();
 
                 let scores = {};
+                let avgScore = null;
                 let totalScore = 0;
                 let errorMessage = '';
                 let docId = null;
@@ -997,12 +1092,8 @@ document.getElementById('excel-file').addEventListener('change', (event) => {
                     statusDiv.textContent = `⚠️ ข้ามแถวที่ ${excelRowNumber} - แผนการเรียน "${normalizedStudyPlan}" ไม่ถูกต้อง`;
                     statusDiv.style.color = 'orange';
                     console.warn(`Skipping row ${excelRowNumber} due to invalid plan: ${normalizedStudyPlan}`);
-                } else if (studentID && await checkDuplicateStudentID(studentID)) {
-                    errorMessage = 'รหัสนักเรียนซ้ำ';
-                    statusDiv.textContent = `⚠️ ข้ามแถวที่ ${excelRowNumber} - รหัสนักเรียนซ้ำ (${studentID})`;
-                    statusDiv.style.color = 'orange';
-                    console.warn(`Duplicate studentID at row ${excelRowNumber}: ${studentID}`);
                 } else {
+                    // Note: duplicate studentID is fine — setDoc will overwrite existing data
                     // Process scores dynamically from planConfig
                     const getScore = (colIdx) => colIdx !== null ? (Number(row[colIdx]) || 0) : 0;
                     const planSubjects = normalizedStudyPlan ? getPlanSubjects(normalizedStudyPlan) : [];
@@ -1012,6 +1103,11 @@ document.getElementById('excel-file').addEventListener('change', (event) => {
                         scores[subj.key] = getScore(colIdx);
                     });
                     totalScore = normalizedStudyPlan ? calculateTotalScore(normalizedStudyPlan, scores) : 0;
+                    // Extract avgScore
+                    if (cfg.avgScore !== null && cfg.avgScore !== undefined) {
+                        const rawAvg = row[cfg.avgScore];
+                        avgScore = rawAvg !== undefined && rawAvg !== '' ? Number(rawAvg) : null;
+                    }
                 }
 
                 // Add row to table regardless of errors
@@ -1040,26 +1136,30 @@ document.getElementById('excel-file').addEventListener('change', (event) => {
                 studentTable.appendChild(tableRow);
                 rowNumber++;
 
-                // Upload to Firebase only if no errors
+                // Upload to Firebase (overwrite by studentID as doc key)
                 if (!errorMessage) {
                     try {
-                        const docRef = await addDoc(collection(db, 'students'), {
+                        const scoresWithAvg = { ...scores };
+                        if (avgScore !== null) scoresWithAvg.avgScore = avgScore;
+                        // Use studentID as document ID so re-uploading overwrites existing data
+                        const docRef = doc(db, 'students', studentID);
+                        await setDoc(docRef, {
                             thID: thID,
                             studentID: studentID,
                             prefix: prefix,
                             name: name,
                             surname: surname,
                             studyPlan: normalizedStudyPlan,
-                            scores: scores
+                            scores: scoresWithAvg
                         });
-                        docId = docRef.id;
+                        docId = studentID;
                         tableRow.setAttribute('data-id', docId);
-                        console.log(`Successfully added row ${excelRowNumber}`);
+                        console.log(`Successfully upserted row ${excelRowNumber} (studentID: ${studentID})`);
                     } catch (error) {
                         tableRow.cells[14].textContent = `ข้อผิดพลาด: ${error.message}`;
                         statusDiv.textContent = `เกิดข้อผิดพลาดในแถวที่ ${excelRowNumber}: ${error.message}`;
                         statusDiv.style.color = 'red';
-                        console.error(`Error adding row ${excelRowNumber}:`, error);
+                        console.error(`Error upserting row ${excelRowNumber}:`, error);
                     }
                 }
 
@@ -1116,7 +1216,8 @@ async function loadStudents() {
         const scores = data.scores || {};
         const studyPlan = data.studyPlan || data.study_plan || '-';
         const total = calculateTotalScore(studyPlan, scores);
-        return { id: docSnapshot.id, data, scores, studyPlan, total };
+        const avgScore = scores.avgScore !== undefined ? scores.avgScore : null;
+        return { id: docSnapshot.id, data, scores, studyPlan, total, avgScore };
     });
 
     renderStudentsTable();
@@ -1156,6 +1257,7 @@ function renderTableScoreHeaders() {
 
 function getSortValue(item, col) {
     if (col === 'total') return item.total;
+    if (col === 'avgScore') return item.avgScore ?? -Infinity;
     // Check if col is any known subject key
     const allSubjs = getAllSubjectColumns();
     if (allSubjs.some(s => s.key === col)) {
@@ -1196,7 +1298,7 @@ function renderStudentsTable(filterFn = null) {
         if (th) th.textContent = sortDir === 'asc' ? '↑' : '↓';
     }
 
-    items.forEach(({ id, data, scores, studyPlan, total }, idx) => {
+    items.forEach(({ id, data, scores, studyPlan, total, avgScore }, idx) => {
         const row = document.createElement('tr');
         row.setAttribute('data-id', id);
         // Score cells: show value if this student's plan uses this subject, otherwise '-'
@@ -1204,8 +1306,9 @@ function renderStudentsTable(filterFn = null) {
         const scoreCells = allSubjs.map(subj => {
             const val = scores[subj.key];
             const inPlan = studentSubjectKeys.has(subj.key);
-            return `<td class="${inPlan ? '' : 'text-gray-300'}">${inPlan && val !== undefined ? val : '-'}</td>`;
+            return `<td class="${inPlan ? '' : 'text-gray-300'}">${inPlan && val !== undefined ? formatNumber(val, 2) : '-'}</td>`;
         }).join('');
+        const avgDisplay = avgScore !== null && avgScore !== undefined ? formatNumber(avgScore, 2) : '-';
         row.innerHTML = `
             <td>${idx + 1}</td>
             <td>${data.thID || '-'}</td>
@@ -1215,7 +1318,8 @@ function renderStudentsTable(filterFn = null) {
             <td>${data.surname || '-'}</td>
             <td>${studyPlan}</td>
             ${scoreCells}
-            <td>${total}</td>
+            <td>${formatNumber(total, 2)}</td>
+            <td class="text-center font-semibold text-teal-700 bg-teal-50">${avgDisplay}</td>
             <td>
                 <button class="edit-btn">แก้ไข</button>
                 <button class="delete-btn">ลบ</button>
@@ -1312,8 +1416,14 @@ function editStudentRow(id, row, studyPlan, allSubjs) {
     });
 
     const totalCellIndex = 7 + allSubjs.length;
-    const actionCellIndex = totalCellIndex + 1;
+    const avgScoreCellIndex = totalCellIndex + 1;
+    const actionCellIndex = totalCellIndex + 2;
     cells[totalCellIndex].innerHTML = `<span id="edit-total-cell">${totalScore}</span>`;
+    // avgScore cell is read-only in edit mode
+    if (cells[avgScoreCellIndex]) {
+        const curAvg = cells[avgScoreCellIndex].textContent;
+        cells[avgScoreCellIndex].innerHTML = `<span class="text-teal-600 font-semibold">${curAvg}</span>`;
+    }
     cells[actionCellIndex].innerHTML = `
         <button class="save-btn" data-id="${id}">บันทึก</button>
         <button class="cancel-btn" data-id="${id}">ยกเลิก</button>
@@ -1340,8 +1450,10 @@ function editStudentRow(id, row, studyPlan, allSubjs) {
         if (tc) tc.textContent = calculateTotalScore(newPlan, newScores);
     });
 
-    cells[actionCellIndex].querySelector('.save-btn').addEventListener('click', () => saveStudent(id, row, allSubjs));
-    cells[actionCellIndex].querySelector('.cancel-btn').addEventListener('click', () => loadStudents());
+    if (cells[actionCellIndex]) {
+        cells[actionCellIndex].querySelector('.save-btn').addEventListener('click', () => saveStudent(id, row, allSubjs));
+        cells[actionCellIndex].querySelector('.cancel-btn').addEventListener('click', () => loadStudents());
+    }
 }
 
 // Save edited student — dynamic version
@@ -1350,6 +1462,7 @@ async function saveStudent(id, row, allSubjs) {
     const cells = row.children;
     const studentID = cells[2].querySelector('input').value;
     const studyPlan = cells[6].querySelector('select').value;
+    if (!allSubjs) allSubjs = getAllSubjectColumns();
 
     if (!studentID || !cells[1].querySelector('input').value || !cells[3].querySelector('select').value || !cells[4].querySelector('input').value || !cells[5].querySelector('input').value || !studyPlan) {
         alert('กรุณากรอกข้อมูลให้ครบถ้วน');
@@ -1370,6 +1483,13 @@ async function saveStudent(id, row, allSubjs) {
             scores[subj.key] = parseInt(inp?.value) || 0;
         }
     });
+
+    // Preserve existing avgScore (read-only, not editable from inline edit)
+    const existingItem = allStudentsData.find(item => item.id === id);
+    const existingAvgScore = existingItem?.avgScore;
+    if (existingAvgScore !== null && existingAvgScore !== undefined) {
+        scores.avgScore = existingAvgScore;
+    }
 
     try {
         if (id) {

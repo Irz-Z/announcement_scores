@@ -9,7 +9,9 @@ export default defineConfig({
         results: resolve(__dirname, 'results.html'),
         admin: resolve(__dirname, 'admin/index.html'),
         adminDashboard: resolve(__dirname, 'admin/admin_dashboard.html'),
-        notFound: resolve(__dirname, '404.html')
+        notFound: resolve(__dirname, '404.html'),
+        test: resolve(__dirname, 'test.html'),
+        maintenance: resolve(__dirname, 'maintenance.html')
       }
     }
   }

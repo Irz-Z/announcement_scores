@@ -39,6 +39,85 @@
                 class="bg-red-50 text-red-600 hover:bg-red-100 px-4 py-2 rounded-lg font-medium transition duration-200 border border-red-200">Logout</button>
         </div>
 
+        <!-- Score Display Settings Panel -->
+        <div
+            class="bg-white p-5 rounded-xl shadow-md mb-6 border-l-8 border-blue-400 flex flex-wrap items-start gap-4 justify-between">
+            <div>
+                <h3 class="text-base font-bold text-blue-700 flex items-center gap-2">📊 การแสดงผลคะแนน</h3>
+                <p class="text-xs text-gray-500 mt-0.5">ตั้งค่าว่าจะแสดงคะแนนดิบหรือร้อยละ และข้อมูลการสอบสัมภาษณ์</p>
+            </div>
+            <div class="flex flex-col gap-4 flex-1 min-w-[280px]">
+                <!-- Raw vs Percentage -->
+                <div class="flex flex-col gap-1">
+                    <label class="text-xs font-bold text-gray-600 uppercase tracking-wide">รูปแบบคะแนน</label>
+                    <div class="flex items-center gap-4 flex-wrap">
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="radio" name="score-display-mode" id="score-mode-raw" value="raw"
+                                class="accent-blue-600 w-4 h-4">
+                            <span class="text-sm font-medium text-gray-700">🔢 คะแนนดิบ</span>
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="radio" name="score-display-mode" id="score-mode-percent" value="percent"
+                                class="accent-blue-600 w-4 h-4">
+                            <span class="text-sm font-medium text-gray-700">% ร้อยละ (หารแล้ว)</span>
+                        </label>
+                    </div>
+                </div>
+                <!-- Oral Exam -->
+                <div class="flex flex-col gap-1">
+                    <label class="text-xs font-bold text-gray-600 uppercase tracking-wide">การสอบสัมภาษณ์</label>
+                    <div class="flex items-center gap-4 flex-wrap">
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="radio" name="oral-exam-mode" id="oral-no" value="no"
+                                class="accent-blue-600 w-4 h-4">
+                            <span class="text-sm font-medium text-gray-700">❌ ไม่มีการสอบสัมภาษณ์</span>
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="radio" name="oral-exam-mode" id="oral-not-included" value="not_included"
+                                class="accent-blue-600 w-4 h-4">
+                            <span class="text-sm font-medium text-gray-700">⏳ มีสัมภาษณ์ (ยังไม่รวมคะแนน)</span>
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="radio" name="oral-exam-mode" id="oral-included" value="included"
+                                class="accent-blue-600 w-4 h-4">
+                            <span class="text-sm font-medium text-gray-700">✅ มีสัมภาษณ์ (รวมคะแนนแล้ว)</span>
+                        </label>
+                    </div>
+                </div>
+                <!-- Pre-Oral Threshold (shown only when not_included is selected) -->
+                <div id="pre-oral-threshold-row"
+                    class="hidden flex-col gap-1 p-3 bg-amber-50 rounded-lg border border-amber-200">
+                    <label class="text-xs font-bold text-amber-700 uppercase tracking-wide">🎯
+                        เกณฑ์คะแนนก่อนสอบสัมภาษณ์</label>
+                    <p class="text-xs text-amber-600">กำหนดว่าต้องได้คะแนนเท่าไหร่ก่อนสัมภาษณ์ เช่น <strong>95%</strong>
+                        หรือ <strong>142.5 คะแนน</strong></p>
+                    <div class="flex items-center gap-2 mt-1 flex-wrap">
+                        <input type="number" id="pre-oral-threshold" min="0" step="0.01" placeholder="เช่น 95"
+                            class="w-28 px-3 py-2 border-2 border-amber-300 rounded-lg text-center text-base font-bold focus:outline-none focus:ring-2 focus:ring-amber-400 bg-white">
+                        <div class="flex flex-col gap-1">
+                            <label class="flex items-center gap-2 cursor-pointer text-sm">
+                                <input type="radio" name="pre-oral-unit" id="pre-oral-unit-pct" value="percent"
+                                    class="accent-amber-600 w-4 h-4" checked>
+                                <span class="font-medium text-amber-800">% ร้อยละ</span>
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer text-sm">
+                                <input type="radio" name="pre-oral-unit" id="pre-oral-unit-score" value="score"
+                                    class="accent-amber-600 w-4 h-4">
+                                <span class="font-medium text-amber-800">คะแนนดิบ</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex items-center gap-3">
+                    <button id="save-display-settings-btn"
+                        class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition duration-200 shadow-sm">
+                        บันทึก
+                    </button>
+                    <span id="display-settings-status" class="text-xs text-gray-500"></span>
+                </div>
+            </div>
+        </div>
+
         <!-- Login Mode Setting Panel -->
         <div
             class="bg-white p-5 rounded-xl shadow-md mb-6 border-l-8 border-purple-400 flex flex-wrap items-center gap-4 justify-between">
@@ -245,6 +324,15 @@
                         <div class="grid grid-cols-2 md:grid-cols-4 gap-3" id="mapping-score-columns">
                             <!-- Populated dynamically by JS based on plan config -->
                         </div>
+                        <!-- Average score column (static, separate from dynamic subject cols) -->
+                        <div class="mt-3 p-3 bg-teal-50 rounded-xl border border-teal-200">
+                            <h5 class="text-xs font-bold text-teal-700 mb-2">🏅 คะแนนเฉลี่ย (ส่วนกลาง)</h5>
+                            <div class="flex flex-col w-40">
+                                <label class="text-xs font-medium text-teal-700 mb-1">คะแนนเฉลี่ย</label>
+                                <select id="map-avgScore"
+                                    class="col-map-select px-3 py-2 border border-teal-300 rounded-lg bg-teal-50 focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-transparent transition text-sm font-mono"></select>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- Preview summary -->
@@ -309,6 +397,8 @@
                                 class="py-3 px-4 text-center font-bold border-b-2 border-secondary" colspan="1"></th>
                             <th class="py-3 px-4 text-center font-bold border-b-2 border-pink-400 bg-pink-50 sortable cursor-pointer select-none"
                                 data-sort="total">รวม <span class="sort-icon">⇅</span></th>
+                            <th class="py-3 px-4 text-center font-bold border-b-2 border-teal-400 bg-teal-50 sortable cursor-pointer select-none"
+                                data-sort="avgScore">คะแนนเฉลี่ย <span class="sort-icon">⇅</span></th>
                             <th class="py-3 px-4 text-left border-b-2 border-gray-300">การจัดการ</th>
                         </tr>
                     </thead>

@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>เข้าสู่ระบบ</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Sarabun', 'sans-serif'],
+                    },
+                    colors: {
+                        primary: '#1E88E5',
+                        secondary: '#E91E63',
+                    }
+                }
+            }
+        }
+    </script>
+    <script type="module" src="login.js"></script>
+</head>
+
+<body class="bg-blue-50 min-h-screen flex flex-col font-sans">
+    <header class="bg-primary text-white p-6 shadow-md text-center border-b-4 border-secondary">
+        <h2 class="text-xl font-bold leading-relaxed drop-shadow-md">ตรวจสอบคะแนนการสอบเข้าต่อระดับชั้นมัธยมศึกษาปีที่ 4
+            ปีการศึกษา 2569 รอบวัดระดับความรู้ทางวิชาการ<br />โรงเรียนเตรียมอุดมศึกษาน้อมเกล้า นครราชสีมา</h2>
+    </header>
+    <div class="w-11/12 max-w-3xl mx-auto my-12 p-10 bg-white rounded-xl shadow-lg border-t-4 border-primary">
+        <section class="login text-center py-8">
+            <div class="mb-6 flex justify-center">
+                <svg class="h-20 w-20 text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+            </div>
+            <h3 class="text-3xl font-bold text-gray-800 mb-4">ปิดปรับปรุงระบบชั่วคราว</h3>
+            <p class="text-xl text-gray-600">ขออภัยในความไม่สะดวก</p>
+        </section>
+    </div>
+
+    <footer class="text-center p-5 text-sm text-gray-500 mt-auto">
+        <p>© 2026 Triamudom suksanomklao Nokronratchsima Powered by Intensive Digital Technology : IDGT</p>
+    </footer>
+</body>
+
+</html>
